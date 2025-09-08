@@ -5,487 +5,127 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Homework Pro</title>
   <meta name="color-scheme" content="dark light" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Ctext y='50' x='10' font-size='48'%3E📚%3C/text%3E%3C/svg%3E">
-  <!-- Tailwind (CDN for MVP) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            ink: '#0b0f1a',
-            glow: '#6ee7ff',
-            mint: '#34d399',
-            warning: '#f59e0b',
-            danger: '#f87171'
-          },
-          boxShadow: {
-            glass: '0 8px 30px rgba(0,0,0,0.35)'
-          },
-          backdropBlur: { xs: '2px' }
-        }
-      }
-    }
-  </script>
-  <style>
-    /* Glass look */
-    .glass {
-      background: radial-gradient(1200px 600px at 80% -10%, rgba(110,231,255,0.15), transparent 40%) ,
-                  radial-gradient(1000px 500px at 0% 100%, rgba(52,211,153,0.10), transparent 40%) ,
-                  rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
-      backdrop-filter: blur(8px);
-    }
-    .grid-auto {
-      grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
-    }
-    .animate-in {
-      animation: fadeInUp .5s ease both;
-    }
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Ctext y='50' x='10' font-size='48'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
-<body class="h-full bg-ink text-white selection:bg-glow/30">
-  <!-- App container -->
-  <div class="min-h-screen">
-    <!-- Top nav -->
-    <header class="sticky top-0 z-40 glass shadow-glass">
-      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="flex h-16 items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/10">📚</div>
-            <div>
-              <h1 class="text-lg font-semibold leading-none tracking-tight">Homework Pro</h1>
-              <p class="text-xs text-white/60">Manage past, present, and upcoming assignments</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="syncBtn" class="rounded-lg bg-white/10 px-3 py-2 text-sm font-medium hover:bg-white/15 ring-1 ring-white/10 transition">Sync Classroom</button>
-            <button id="notifyBtn" class="rounded-lg bg-mint/20 px-3 py-2 text-sm font-medium hover:bg-mint/30 ring-1 ring-mint/40 transition">Send Reminders</button>
-            <button id="themeBtn" class="rounded-lg bg-white/10 px-3 py-2 text-sm hover:bg-white/15 ring-1 ring-white/10" title="Toggle theme">☀️/🌙</button>
-          </div>
+<body>
+  <header class="glass header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <div class="brand-icon">📚</div>
+        <div>
+          <div class="brand-title">Homework Pro</div>
+          <div class="brand-sub">Manage past, present, and upcoming assignments</div>
         </div>
       </div>
-    </header>
-
-    <!-- Main -->
-    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <!-- Stats row -->
-      <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="glass rounded-2xl p-4 animate-in">
-          <div class="text-sm text-white/70">Due Today</div>
-          <div id="statDueToday" class="mt-1 text-3xl font-bold">0</div>
-          <div class="mt-2 text-xs text-white/50" id="statDueTodayHint">—</div>
-        </div>
-        <div class="glass rounded-2xl p-4 animate-in">
-          <div class="text-sm text-white/70">Due Tomorrow</div>
-          <div id="statDueTomorrow" class="mt-1 text-3xl font-bold">0</div>
-          <div class="mt-2 text-xs text-white/50" id="statDueTomorrowHint">—</div>
-        </div>
-        <div class="glass rounded-2xl p-4 animate-in">
-          <div class="text-sm text-white/70">Upcoming (7d)</div>
-          <div id="statUpcoming" class="mt-1 text-3xl font-bold">0</div>
-          <div class="mt-2 text-xs text-white/50" id="statUpcomingHint">—</div>
-        </div>
-        <div class="glass rounded-2xl p-4 animate-in">
-          <div class="text-sm text-white/70">Late</div>
-          <div id="statLate" class="mt-1 text-3xl font-bold text-danger">0</div>
-          <div class="mt-2 text-xs text-white/50" id="statLateHint">—</div>
-        </div>
-      </section>
-
-      <!-- Filters / actions -->
-      <section class="glass rounded-2xl p-4 animate-in">
-        <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div class="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-            <label class="text-sm">
-              <span class="block text-white/70 mb-1">Student</span>
-              <select id="filterStudent" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2">
-                <option value="">All students</option>
-              </select>
-            </label>
-            <label class="text-sm">
-              <span class="block text-white/70 mb-1">Course</span>
-              <select id="filterCourse" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2">
-                <option value="">All courses</option>
-              </select>
-            </label>
-            <label class="text-sm">
-              <span class="block text-white/70 mb-1">Status</span>
-              <select id="filterStatus" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2">
-                <option value="">Any</option>
-                <option value="DUE_TODAY">Due Today</option>
-                <option value="DUE_TOMORROW">Due Tomorrow</option>
-                <option value="UPCOMING">Upcoming</option>
-                <option value="LATE">Late</option>
-                <option value="COMPLETED">Completed</option>
-              </select>
-            </label>
-            <label class="text-sm">
-              <span class="block text-white/70 mb-1">Window</span>
-              <select id="filterWindow" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2">
-                <option value="ALL">All</option>
-                <option value="TODAY">Today</option>
-                <option value="TOMORROW">Tomorrow</option>
-                <option value="WEEK">Next 7 Days</option>
-                <option value="PAST">Past</option>
-              </select>
-            </label>
-          </div>
-          <div class="flex gap-2">
-            <button id="addRouteBtn" class="rounded-lg bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 hover:bg-white/15">Add Recipient</button>
-            <button id="manageTemplatesBtn" class="rounded-lg bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 hover:bg-white/15">Templates</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Assignment table -->
-      <section class="glass rounded-2xl p-0 overflow-hidden animate-in">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
-          <h2 class="text-base font-semibold">Assignments</h2>
-          <div class="flex items-center gap-2">
-            <input id="searchBox" type="search" placeholder="Search…" class="rounded-lg bg-white/5 ring-1 ring-white/10 px-3 py-1.5 text-sm">
-            <select id="sortSelect" class="rounded-lg bg-white/5 ring-1 ring-white/10 px-2 py-1.5 text-sm">
-              <option value="dueAsc">Sort: Due ↑</option>
-              <option value="dueDesc">Sort: Due ↓</option>
-              <option value="courseAsc">Course A–Z</option>
-              <option value="courseDesc">Course Z–A</option>
-            </select>
-          </div>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <thead class="bg-white/5">
-              <tr class="text-left text-white/70">
-                <th class="px-4 py-3">Course</th>
-                <th class="px-4 py-3">Title</th>
-                <th class="px-4 py-3">Student</th>
-                <th class="px-4 py-3">Due</th>
-                <th class="px-4 py-3">Status</th>
-                <th class="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="assignmentTbody" class="divide-y divide-white/10">
-              <!-- Rows injected by JS -->
-            </tbody>
-          </table>
-          <div id="emptyState" class="hidden p-8 text-center text-white/60">No assignments to display.</div>
-        </div>
-        <div class="flex items-center justify-between px-4 py-3 border-t border-white/10">
-          <div id="tableCount" class="text-xs text-white/60">0 items</div>
-          <div class="flex items-center gap-2">
-            <button id="prevPage" class="rounded bg-white/10 px-2 py-1 text-xs ring-1 ring-white/10 disabled:opacity-40">Prev</button>
-            <button id="nextPage" class="rounded bg-white/10 px-2 py-1 text-xs ring-1 ring-white/10 disabled:opacity-40">Next</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Recipients panel -->
-      <section class="glass rounded-2xl p-4 animate-in">
-        <div class="flex items-center justify-between">
-          <h3 class="text-base font-semibold">Recipients & Routing</h3>
-          <button id="refreshRoutesBtn" class="rounded bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 hover:bg-white/15">Refresh</button>
-        </div>
-        <div id="routesGrid" class="mt-4 grid gap-4 grid-auto">
-          <!-- Cards injected by JS -->
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- Add/Edit Route Modal -->
-  <dialog id="routeModal" class="backdrop:bg-black/70 rounded-2xl p-0 w-[36rem] max-w-[95vw]">
-    <form method="dialog" class="glass rounded-2xl p-6">
-      <div class="flex items-center justify-between">
-        <h4 id="routeModalTitle" class="text-lg font-semibold">Add Recipient</h4>
-        <button value="cancel" class="text-white/60 hover:text-white">✕</button>
+      <div class="toolbar">
+        <button id="syncBtn" class="btn">Sync Classroom</button>
+        <button id="notifyBtn" class="btn btn-mint">Send Reminders</button>
       </div>
-      <div class="mt-4 grid gap-3 sm:grid-cols-2">
-        <label class="text-sm col-span-2">
-          <span class="block text-white/70 mb-1">Student</span>
-          <select id="routeStudent" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2"></select>
-        </label>
-        <label class="text-sm">
-          <span class="block text-white/70 mb-1">Channel</span>
-          <select id="routeChannel" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2">
-            <option value="SMS">SMS</option>
-            <option value="EMAIL">Email</option>
+    </div>
+  </header>
+
+  <main class="wrap main">
+    <!-- Stats -->
+    <section class="row cols-4">
+      <div class="card glass"><div class="muted">Due Today</div><div id="statDueToday" class="stat-num">0</div><div id="statDueTodayHint" class="stat-hint">—</div></div>
+      <div class="card glass"><div class="muted">Due Tomorrow</div><div id="statDueTomorrow" class="stat-num">0</div><div id="statDueTomorrowHint" class="stat-hint">—</div></div>
+      <div class="card glass"><div class="muted">Upcoming (7d)</div><div id="statUpcoming" class="stat-num">0</div><div id="statUpcomingHint" class="stat-hint">—</div></div>
+      <div class="card glass"><div class="muted">Late</div><div id="statLate" class="stat-num danger">0</div><div id="statLateHint" class="stat-hint">—</div></div>
+    </section>
+
+    <!-- Filters -->
+    <section class="card glass filters">
+      <div class="row cols-4">
+        <label><div class="muted label">Student</div><select id="filterStudent"><option value="">All</option></select></label>
+        <label><div class="muted label">Course</div><select id="filterCourse"><option value="">All</option></select></label>
+        <label><div class="muted label">Status</div>
+          <select id="filterStatus">
+            <option value="">Any</option><option>DUE_TODAY</option><option>DUE_TOMORROW</option><option>UPCOMING</option><option>LATE</option><option>COMPLETED</option>
           </select>
         </label>
-        <label class="text-sm">
-          <span class="block text-white/70 mb-1">Destination</span>
-          <input id="routeDestination" type="text" placeholder="+14175550123 or name@example.com" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2" />
+        <label><div class="muted label">Window</div>
+          <select id="filterWindow">
+            <option>ALL</option><option>TODAY</option><option>TOMORROW</option><option>WEEK</option><option>PAST</option>
+          </select>
         </label>
-        <label class="text-sm">
-          <span class="block text-white/70 mb-1">Policy</span>
-          <select id="routePolicy" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2">
+      </div>
+      <div class="toolbar end">
+        <button id="addRouteBtn" class="btn">Add Recipient</button>
+        <button id="manageTemplatesBtn" class="btn">Templates</button>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="glass table-wrap">
+      <div class="table-head">
+        <div class="table-title">Assignments</div>
+        <div class="toolbar">
+          <input id="searchBox" type="search" placeholder="Search…">
+          <select id="sortSelect">
+            <option value="dueAsc">Sort: Due ↑</option>
+            <option value="dueDesc">Sort: Due ↓</option>
+            <option value="courseAsc">Course A–Z</option>
+            <option value="courseDesc">Course Z–A</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr class="muted"><th>Course</th><th>Title</th><th>Student</th><th>Due</th><th>Status</th><th class="right">Actions</th></tr></thead>
+          <tbody id="assignmentTbody"></tbody>
+        </table>
+        <div id="emptyState" class="muted empty">No assignments to display.</div>
+      </div>
+      <div class="table-foot">
+        <div id="tableCount" class="muted small">0 items</div>
+        <div class="toolbar">
+          <button id="prevPage" class="btn" disabled>Prev</button>
+          <button id="nextPage" class="btn">Next</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recipients -->
+    <section class="card glass">
+      <div class="row between">
+        <div class="section-title">Recipients & Routing</div>
+        <button id="refreshRoutesBtn" class="btn">Refresh</button>
+      </div>
+      <div id="routesGrid" class="routes-grid"></div>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <dialog id="routeModal">
+    <form method="dialog" class="glass modal">
+      <div class="row between">
+        <div id="routeModalTitle" class="modal-title">Add Recipient</div>
+        <button value="cancel" class="btn">✕</button>
+      </div>
+      <div class="row cols-2 modal-grid">
+        <label class="muted">Student<br><select id="routeStudent" class="w100"></select></label>
+        <label class="muted">Channel<br><select id="routeChannel"><option>SMS</option><option>EMAIL</option></select></label>
+        <label class="muted">Destination<br><input id="routeDestination" placeholder="+14175550123 or name@example.com"></label>
+        <label class="muted">Policy<br>
+          <select id="routePolicy">
             <option value='{"when":"DUE_TOMORROW","hour":19,"tz":"America/Chicago"}'>Due Tomorrow, 7:00pm</option>
             <option value='{"when":"DUE_TODAY","hour":17,"tz":"America/Chicago"}'>Due Today, 5:00pm</option>
-            <option value='{"when":"WEEKLY_DIGEST","hour":18,"dow":"Sun","tz":"America/Chicago"}'>Weekly Digest (Sun 6pm)</option>
           </select>
         </label>
-        <label class="text-sm col-span-2">
-          <span class="block text-white/70 mb-1">Template</span>
-          <select id="routeTemplate" class="w-full rounded-lg bg-white/5 ring-1 ring-white/10 p-2"></select>
-        </label>
+        <label class="muted col-span-2">Template<br><select id="routeTemplate" class="w100"></select></label>
       </div>
-      <div class="mt-6 flex justify-end gap-2">
-        <button value="cancel" class="rounded-lg bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 hover:bg-white/15">Cancel</button>
-        <button id="routeSaveBtn" type="button" class="rounded-lg bg-mint/30 px-3 py-2 text-sm ring-1 ring-mint/40 hover:bg-mint/40">Save</button>
+      <div class="row end gap">
+        <button value="cancel" class="btn">Cancel</button>
+        <button id="routeSaveBtn" type="button" class="btn btn-mint">Save</button>
       </div>
     </form>
   </dialog>
 
   <!-- Toast -->
-  <div id="toast" class="fixed bottom-4 right-4 hidden">
-    <div class="glass rounded-xl px-4 py-3 text-sm shadow-glass" id="toastMsg">Saved.</div>
-  </div>
+  <div class="toast" id="toast" style="display:none"><div class="card glass" id="toastMsg">Saved.</div></div>
 
-  <!-- App script (MVP mocks; will swap to real API calls next) -->
-  <script>
-    // THEME
-    (function() {
-      const key = 'hwpro-theme';
-      const btn = document.getElementById('themeBtn');
-      function apply(mode) {
-        if (mode === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-      }
-      const saved = localStorage.getItem(key) || 'dark';
-      apply(saved);
-      btn.addEventListener('click', () => {
-        const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-        localStorage.setItem(key, next);
-        apply(next);
-      });
-    })();
-
-    // Toast helper
-    function toast(msg) {
-      const t = document.getElementById('toast');
-      const m = document.getElementById('toastMsg');
-      m.textContent = msg;
-      t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 2200);
-    }
-
-    // Data placeholders (will be fetched from API later)
-    let students = [
-      { id: 's1', name: 'Alex', email: 'alex@example.com' },
-      { id: 's2', name: 'Maya', email: 'maya@example.com' }
-    ];
-    let courses = [
-      { id: 'c1', name: 'Algebra I' },
-      { id: 'c2', name: 'English Lit' }
-    ];
-    let assignments = [
-      { id: 'a1', courseId: 'c1', course: 'Algebra I', title: 'Chapter 3 Worksheet', student: 'Alex', due: new Date(Date.now()+6*3600*1000), status: 'DUE_TODAY' },
-      { id: 'a2', courseId: 'c2', course: 'English Lit', title: 'Read Act II', student: 'Maya', due: new Date(Date.now()+24*3600*1000), status: 'DUE_TOMORROW' },
-      { id: 'a3', courseId: 'c1', course: 'Algebra I', title: 'Quiz Review', student: 'Maya', due: new Date(Date.now()+5*24*3600*1000), status: 'UPCOMING' },
-      { id: 'a4', courseId: 'c2', course: 'English Lit', title: 'Essay Draft', student: 'Alex', due: new Date(Date.now()-2*24*3600*1000), status: 'LATE' }
-    ];
-    let routes = []; // {id, studentId, channel, destination, policy, templateId}
-
-    // Populate selects
-    function loadFilters() {
-      const sSel = document.getElementById('filterStudent');
-      const cSel = document.getElementById('filterCourse');
-      const rStu = document.getElementById('routeStudent');
-      [sSel, rStu].forEach(sel => {
-        sel.innerHTML = '<option value="">All students</option>';
-        students.forEach(s => {
-          const opt = document.createElement('option');
-          opt.value = s.id;
-          opt.textContent = s.name;
-          sel.appendChild(opt);
-        });
-      });
-      cSel.innerHTML = '<option value="">All courses</option>';
-      courses.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.name;
-        cSel.appendChild(opt);
-      });
-      // Templates (placeholder)
-      const tSel = document.getElementById('routeTemplate');
-      tSel.innerHTML = '';
-      [['sms_due_tomorrow_default','SMS: Due Tomorrow'],
-       ['email_due_tomorrow_default','Email: Due Tomorrow']].forEach(([id,label])=>{
-        const opt=document.createElement('option'); opt.value=id; opt.textContent=label; tSel.appendChild(opt);
-      });
-    }
-
-    // Stats
-    function refreshStats() {
-      const now = new Date();
-      const isToday = d => d.toDateString() === now.toDateString();
-      const tomorrow = new Date(now); tomorrow.setDate(now.getDate()+1);
-      const isTomorrow = d => d.toDateString() === tomorrow.toDateString();
-
-      const dueToday = assignments.filter(a => isToday(a.due)).length;
-      const dueTomorrow = assignments.filter(a => isTomorrow(a.due)).length;
-      const upcoming = assignments.filter(a => a.due > tomorrow && a.due - now <= 7*24*3600*1000).length;
-      const late = assignments.filter(a => a.due < now).length;
-
-      document.getElementById('statDueToday').textContent = dueToday;
-      document.getElementById('statDueTomorrow').textContent = dueTomorrow;
-      document.getElementById('statUpcoming').textContent = upcoming;
-      document.getElementById('statLate').textContent = late;
-
-      document.getElementById('statDueTodayHint').textContent = dueToday ? 'Time-block the evening' : 'All clear';
-      document.getElementById('statDueTomorrowHint').textContent = dueTomorrow ? 'Prep materials tonight' : 'No rush';
-      document.getElementById('statUpcomingHint').textContent = upcoming ? 'Plan the week' : 'Light week ahead';
-      document.getElementById('statLateHint').textContent = late ? 'Resolve ASAP' : 'On track';
-    }
-
-    // Table rendering
-    let page = 1, pageSize = 10;
-    function formatDate(d){
-      return d.toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-    }
-    function badge(status){
-      const map = {
-        DUE_TODAY: 'bg-warning/20 text-warning ring-warning/30',
-        DUE_TOMORROW: 'bg-glow/20 text-glow ring-glow/30',
-        UPCOMING: 'bg-white/10 text-white/80 ring-white/20',
-        LATE: 'bg-danger/20 text-danger ring-danger/30',
-        COMPLETED: 'bg-mint/20 text-mint ring-mint/30'
-      };
-      return `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs ring-1 ${map[status]||'bg-white/10 text-white/70 ring-white/20'}">${status.replace('_',' ')}</span>`;
-    }
-    function renderTable() {
-      const tbody = document.getElementById('assignmentTbody');
-      const search = document.getElementById('searchBox').value.toLowerCase();
-      const studentFilter = document.getElementById('filterStudent').value;
-      const courseFilter = document.getElementById('filterCourse').value;
-      const statusFilter = document.getElementById('filterStatus').value;
-      const sort = document.getElementById('sortSelect').value;
-
-      let rows = assignments.filter(a => {
-        const matchesText = [a.course, a.title, a.student].join(' ').toLowerCase().includes(search);
-        const matchesStudent = !studentFilter || students.find(s=>s.name===a.student)?.id===studentFilter;
-        const matchesCourse = !courseFilter || a.courseId === courseFilter;
-        const matchesStatus = !statusFilter || a.status === statusFilter;
-        return matchesText && matchesStudent && matchesCourse && matchesStatus;
-      });
-
-      rows.sort((x,y) => {
-        if (sort==='dueAsc') return x.due - y.due;
-        if (sort==='dueDesc') return y.due - x.due;
-        if (sort==='courseAsc') return x.course.localeCompare(y.course);
-        if (sort==='courseDesc') return y.course.localeCompare(x.course);
-        return 0;
-      });
-
-      const total = rows.length;
-      const start = (page-1)*pageSize;
-      const slice = rows.slice(start, start+pageSize);
-
-      tbody.innerHTML = slice.map(a => `
-        <tr>
-          <td class="px-4 py-3">${a.course}</td>
-          <td class="px-4 py-3">${a.title}</td>
-          <td class="px-4 py-3">${a.student}</td>
-          <td class="px-4 py-3">${formatDate(a.due)}</td>
-          <td class="px-4 py-3">${badge(a.status)}</td>
-          <td class="px-4 py-3 text-right">
-            <button class="rounded bg-white/10 px-2 py-1 text-xs ring-1 ring-white/10 hover:bg-white/15" onclick="markComplete('${a.id}')">Mark Complete</button>
-            <button class="rounded bg-white/10 px-2 py-1 text-xs ring-1 ring-white/10 hover:bg-white/15" onclick="openClassroom('${a.id}')">Open</button>
-          </td>
-        </tr>
-      `).join('');
-
-      document.getElementById('tableCount').textContent = `${total} item${total!==1?'s':''}`;
-      document.getElementById('emptyState').classList.toggle('hidden', total !== 0);
-      document.getElementById('prevPage').disabled = page === 1;
-      document.getElementById('nextPage').disabled = start + pageSize >= total;
-    }
-
-    // Routes grid
-    function renderRoutes() {
-      const grid = document.getElementById('routesGrid');
-      if (!routes.length) {
-        grid.innerHTML = `<div class="text-white/60 text-sm">No recipients yet. Click <b>Add Recipient</b> to create one.</div>`;
-        return;
-      }
-      grid.innerHTML = routes.map(r => {
-        const stu = students.find(s => s.id === r.studentId);
-        const summary = r.channel === 'SMS' ? r.destination : r.destination;
-        return `
-          <div class="glass rounded-xl p-4 space-y-2">
-            <div class="flex items-center justify-between">
-              <div class="font-medium">${stu?.name || 'Unknown'}</div>
-              <span class="text-xs px-2 py-0.5 rounded-full ring-1 ${r.channel==='SMS'?'ring-glow/30 text-glow bg-glow/10':'ring-mint/30 text-mint bg-mint/10'}">${r.channel}</span>
-            </div>
-            <div class="text-white/70 text-sm break-all">${summary}</div>
-            <div class="text-xs text-white/50">Policy: <code>${r.policy}</code></div>
-            <div class="flex gap-2 pt-1">
-              <button class="rounded bg-white/10 px-2 py-1 text-xs ring-1 ring-white/10" onclick="editRoute('${r.id}')">Edit</button>
-              <button class="rounded bg-danger/20 px-2 py-1 text-xs ring-1 ring-danger/30" onclick="deleteRoute('${r.id}')">Delete</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // Actions (MVP — wire to API later)
-    function markComplete(id) { toast('Marked complete'); /* TODO: PATCH /api/submission */ }
-    function openClassroom(id) { toast('Opening Classroom…'); /* TODO: deep link */ }
-
-    // Pagination & filter listeners
-    ['filterStudent','filterCourse','filterStatus','filterWindow','sortSelect','searchBox'].forEach(id=>{
-      document.getElementById(id).addEventListener('input', ()=>{ page=1; renderTable(); });
-    });
-    document.getElementById('prevPage').addEventListener('click', ()=>{ page=Math.max(1,page-1); renderTable(); });
-    document.getElementById('nextPage').addEventListener('click', ()=>{ page=page+1; renderTable(); });
-
-    // Sync & notify (placeholder)
-    document.getElementById('syncBtn').addEventListener('click', async () => {
-      toast('Sync started…');
-      // TODO: POST /api/sync
-    });
-    document.getElementById('notifyBtn').addEventListener('click', async () => {
-      toast('Sending reminders…');
-      // TODO: POST /api/notify
-    });
-
-    // Route modal
-    const routeModal = document.getElementById('routeModal');
-    document.getElementById('addRouteBtn').addEventListener('click', ()=>{
-      document.getElementById('routeModalTitle').textContent = 'Add Recipient';
-      document.getElementById('routeDestination').value = '';
-      document.getElementById('routeChannel').value = 'SMS';
-      document.getElementById('routeStudent').value = '';
-      routeModal.showModal();
-    });
-    document.getElementById('routeSaveBtn').addEventListener('click', ()=>{
-      const id = 'r'+Math.random().toString(36).slice(2,8);
-      const studentId = document.getElementById('routeStudent').value;
-      const channel = document.getElementById('routeChannel').value;
-      const destination = document.getElementById('routeDestination').value.trim();
-      const policy = document.getElementById('routePolicy').value;
-      const templateId = document.getElementById('routeTemplate').value;
-      if (!studentId || !destination) return toast('Student and destination required');
-      routes.push({ id, studentId, channel, destination, policy, templateId });
-      routeModal.close();
-      renderRoutes();
-      toast('Recipient saved');
-      // TODO: POST /api/routes
-    });
-    document.getElementById('refreshRoutesBtn').addEventListener('click', ()=>{ renderRoutes(); toast('Routes refreshed'); });
-    window.editRoute = (id)=> toast('Edit flow (TODO)');
-    window.deleteRoute = (id)=> { routes = routes.filter(r=>r.id!==id); renderRoutes(); toast('Recipient deleted'); };
-
-    // INIT
-    loadFilters();
-    refreshStats();
-    renderTable();
-    renderRoutes();
-  </script>
+  <!-- App -->
+  <script type="module" src="assets/js/main.js"></script>
 </body>
 </html>
