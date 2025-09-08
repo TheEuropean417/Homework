@@ -33,11 +33,15 @@ export function loadFilters() {
     cSel.appendChild(o);
   });
 
-  // Templates (placeholder until we load from JSON)
+  // Templates
   const tSel = document.getElementById("routeTemplate");
   tSel.innerHTML = "";
-  [["sms_due_tomorrow_default","SMS: Due Tomorrow"],["email_due_tomorrow_default","Email: Due Tomorrow"]]
-    .forEach(([v,l])=>{const o=document.createElement("option"); o.value=v; o.textContent=l; tSel.appendChild(o);});
+  state.templates.forEach(t => {
+    const o = document.createElement("option");
+    o.value = t.id;
+    o.textContent = t.name;
+    tSel.appendChild(o);
+  });
 }
 
 export function renderTable() {
@@ -51,7 +55,7 @@ export function renderTable() {
   let rows = state.assignments.filter(a => {
     const text = [lookupCourseName(a.courseId), a.title, a.student].join(" ").toLowerCase();
     const okText = text.includes(search);
-    const okStu = !studentFilter || state.students[0]?.id === studentFilter; // single-student
+    const okStu = !studentFilter || state.students[0]?.id === studentFilter; // single student
     const okCrs = !courseFilter || a.courseId === courseFilter;
     const okSt = !statusFilter || a.status === statusFilter;
     return okText && okStu && okCrs && okSt;

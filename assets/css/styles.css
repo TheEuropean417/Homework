@@ -1,0 +1,65 @@
+:root{--ink:#0b0f1a;--glow:#6ee7ff;--mint:#34d399;--warn:#f59e0b;--dang:#f87171}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:#fff;font:14px ui-sans-serif,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.header{position:sticky;top:0;z-index:40}
+.header-inner{height:64px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;gap:12px;align-items:center}
+.brand-icon{height:40px;width:40px;display:grid;place-items:center;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1)}
+.brand-title{font-weight:600}
+.brand-sub{color:rgba(255,255,255,.6);font-size:12px;margin-top:2px}
+.main{padding:32px 0;display:grid;gap:24px}
+.row{display:grid;gap:16px}
+.row.between{grid-auto-flow:column;justify-content:space-between;align-items:center}
+.row.end{grid-auto-flow:column;justify-content:end;align-items:center}
+.gap{gap:8px}
+@media(min-width:640px){.cols-2{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.cols-4{grid-template-columns:repeat(4,1fr)}}
+.card{border-radius:16px;padding:16px}
+.glass{background:radial-gradient(1200px 600px at 80% -10%, rgba(110,231,255,.15), transparent 40%), radial-gradient(1000px 500px at 0% 100%, rgba(52,211,153,.1), transparent 40%), rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(8px)}
+.muted{color:rgba(255,255,255,.6)}
+.label{font-size:12px;margin-bottom:6px}
+.btn{border-radius:10px;padding:8px 12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn-mint{background:rgba(52,211,153,.2);border-color:rgba(52,211,153,.4)}
+.btn-mint:hover{background:rgba(52,211,153,.3)}
+.header .toolbar,.toolbar{display:flex;gap:8px;align-items:center}
+.toolbar.end{justify-content:flex-end}
+.stat-num{font-size:28px;font-weight:700;margin-top:4px}
+.stat-hint{font-size:12px;margin-top:6px;color:rgba(255,255,255,.6)}
+.danger{color:var(--dang)}
+.table-wrap{border-radius:16px;overflow:hidden}
+.table-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.table-title{font-weight:600}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:rgba(255,255,255,.06)}
+th,td{padding:12px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08)}
+.right{text-align:right}
+.table-scroll{overflow:auto}
+.empty{display:none;padding:24px;text-align:center}
+.table-foot{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid rgba(255,255,255,.1)}
+.small{font-size:12px}
+.routes-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:12px}
+.header .brand-icon{box-shadow:0 8px 30px rgba(0,0,0,0.35)}
+.modal{padding:20px;border-radius:16px}
+.modal-title{font-weight:600;font-size:18px}
+.modal-grid{margin-top:12px}
+.col-span-2{grid-column:1/-1}
+.w100{width:100%}
+dialog{border:none;border-radius:16px;width:min(700px,95vw);padding:0}
+dialog::backdrop{background:rgba(0,0,0,.7)}
+.badge{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid}
+.b-today{background:rgba(245,158,11,.2);color:#f59e0b;border-color:rgba(245,158,11,.3)}
+.b-tomorrow{background:rgba(110,231,255,.2);color:#6ee7ff;border-color:rgba(110,231,255,.3)}
+.b-up{background:rgba(255,255,255,.1);color:#ddd;border-color:rgba(255,255,255,.2)}
+.b-late{background:rgba(248,113,113,.2);color:#f87171;border-color:rgba(248,113,113,.3)}
+.toast{position:fixed;bottom:16px;right:16px}
+
+/* Reminder preview list */
+.reminder-list{display:grid;gap:12px;margin-top:12px}
+.reminder-item{border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06)}
+.reminder-head{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.chip{font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08)}
+.codebox{margin-top:8px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:12px}
+.copy-btn{margin-left:auto}

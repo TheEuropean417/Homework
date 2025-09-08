@@ -17,7 +17,7 @@ export function renderRoutes() {
           <span class="badge ${chipClass}">${r.channel}</span>
         </div>
         <div class="muted" style="margin-top:6px;word-break:break-all">${r.destination}</div>
-        <div class="muted" style="font-size:12px;margin-top:4px">Policy: <code>${JSON.stringify(r.policy)}</code></div>
+        <div class="muted" style="font-size:12px;margin-top:4px">Policy: <code>${typeof r.policy==='string'?r.policy:JSON.stringify(r.policy)}</code></div>
         <div class="toolbar" style="margin-top:8px">
           <button class="btn" data-edit="${r.id}">Edit</button>
           <button class="btn" data-delete="${r.id}">Delete</button>
@@ -45,11 +45,10 @@ export function setupRouteModal() {
     const templateId = document.getElementById("routeTemplate").value;
 
     if (!studentId || !destination) return toast("Student and destination required");
-    state.routes.push({ id, studentId, channel, destination, policy, templateId });
+    state.routes.push({ id, studentId, channel, destination, policy, templateId, active: true });
     document.getElementById("routeModal").close();
     renderRoutes();
     toast("Recipient saved");
-    // TODO: persist routes to JSON via backend (when you add one)
   });
 
   document.getElementById("refreshRoutesBtn").addEventListener("click", () => {
@@ -67,7 +66,7 @@ export function setupRouteModal() {
       renderRoutes();
       toast("Recipient deleted");
     } else if (el.dataset.edit) {
-      toast("Edit flow (TODO)"); // left as exercise
+      toast("Edit flow (TODO)");
     }
   });
 }

@@ -96,7 +96,7 @@
     </section>
   </main>
 
-  <!-- Modal -->
+  <!-- Add/Edit Route Modal -->
   <dialog id="routeModal">
     <form method="dialog" class="glass modal">
       <div class="row between">
@@ -118,6 +118,22 @@
       <div class="row end gap">
         <button value="cancel" class="btn">Cancel</button>
         <button id="routeSaveBtn" type="button" class="btn btn-mint">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Reminder Preview Modal -->
+  <dialog id="reminderModal">
+    <form method="dialog" class="glass modal">
+      <div class="row between">
+        <div class="modal-title">Reminder Preview</div>
+        <button value="cancel" class="btn">✕</button>
+      </div>
+      <div id="reminderSummary" class="muted small" style="margin-top:6px"></div>
+      <div id="reminderList" class="reminder-list"></div>
+      <div class="row end gap" style="margin-top:12px">
+        <button id="copyAllBtn" type="button" class="btn">Copy All</button>
+        <button value="cancel" class="btn btn-mint">Close</button>
       </div>
     </form>
   </dialog>

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "r1",
+    "studentId": "s1",
+    "channel": "SMS",
+    "destination": "+14175550123",
+    "active": true,
+    "policy": { "when": "DUE_TOMORROW", "hour": 19, "tz": "America/Chicago" },
+    "templateId": "sms_due_tomorrow_default"
+  }
+]

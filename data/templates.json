@@ -1,0 +1,16 @@
+[
+  {
+    "id": "sms_due_tomorrow_default",
+    "channel": "SMS",
+    "name": "SMS: Due Tomorrow",
+    "subject": null,
+    "body": "Reminder: {{student}} has \"{{title}}\" for {{course}} due {{dueDate}}."
+  },
+  {
+    "id": "email_due_tomorrow_default",
+    "channel": "EMAIL",
+    "name": "Email: Due Tomorrow",
+    "subject": "Due tomorrow: {{title}} ({{course}})",
+    "body": "<p>{{student}} has <b>{{title}}</b> for <b>{{course}}</b> due {{dueDate}}</p>"
+  }
+]
