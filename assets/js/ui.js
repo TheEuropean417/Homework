@@ -9,7 +9,12 @@ export function toast(msg) {
 }
 
 export function fmtDate(d) {
-  return d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  if (!d) return "—";
+  try {
+    return d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "—";
+  }
 }
 
 export function statusBadge(status) {

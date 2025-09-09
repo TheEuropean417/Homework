@@ -33,15 +33,17 @@ export function loadFilters() {
     cSel.appendChild(o);
   });
 
-  // Templates
+  // Templates (if present)
   const tSel = document.getElementById("routeTemplate");
-  tSel.innerHTML = "";
-  state.templates.forEach(t => {
-    const o = document.createElement("option");
-    o.value = t.id;
-    o.textContent = t.name;
-    tSel.appendChild(o);
-  });
+  if (tSel) {
+    tSel.innerHTML = "";
+    (state.templates || []).forEach(t => {
+      const o = document.createElement("option");
+      o.value = t.id;
+      o.textContent = t.name;
+      tSel.appendChild(o);
+    });
+  }
 }
 
 export function renderTable() {
@@ -52,21 +54,29 @@ export function renderTable() {
   const statusFilter = document.getElementById("filterStatus").value;
   const sort = document.getElementById("sortSelect").value;
 
+  function lookupCourseName(courseId) {
+    return state.courses.find(c => c.id === courseId)?.name || "—";
+  }
+
   let rows = state.assignments.filter(a => {
     const text = [lookupCourseName(a.courseId), a.title, a.student].join(" ").toLowerCase();
     const okText = text.includes(search);
-    const okStu = !studentFilter || state.students[0]?.id === studentFilter; // single student
+    const okStu = !studentFilter || state.students[0]?.id === studentFilter; // single-student
     const okCrs = !courseFilter || a.courseId === courseFilter;
     const okSt = !statusFilter || a.status === statusFilter;
     return okText && okStu && okCrs && okSt;
   });
 
-  rows.sort((x,y) => {
-    if (sort === "dueAsc") return x.due - y.due;
-    if (sort === "dueDesc") return y.due - x.due;
+  // Sorting with null-safe due
+  rows.sort((x, y) => {
     if (sort === "courseAsc") return lookupCourseName(x.courseId).localeCompare(lookupCourseName(y.courseId));
     if (sort === "courseDesc") return lookupCourseName(y.courseId).localeCompare(lookupCourseName(x.courseId));
-    return 0;
+    // due sorting
+    const dx = x.due ? x.due.getTime() : Number.POSITIVE_INFINITY;
+    const dy = y.due ? y.due.getTime() : Number.POSITIVE_INFINITY;
+    if (sort === "dueDesc") return dy - dx;
+    // default dueAsc
+    return dx - dy;
   });
 
   const total = rows.length;

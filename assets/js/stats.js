@@ -1,14 +1,19 @@
 import { state } from "./state.js";
 
+function isSameDay(a, b) {
+  if (!a || !b) return false;
+  return a.toDateString() === b.toDateString();
+}
+
 export function refreshStats() {
   const now = new Date();
-  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
-  const isSameDay = (a, b) => a.toDateString() === b.toDateString();
+  const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+  const tomorrowStart = new Date(todayStart); tomorrowStart.setDate(todayStart.getDate() + 1);
 
-  const dueToday = state.assignments.filter(a => isSameDay(a.due, now)).length;
-  const dueTomorrow = state.assignments.filter(a => isSameDay(a.due, tomorrow)).length;
-  const upcoming = state.assignments.filter(a => a.due > tomorrow && a.due - now <= 7 * 24 * 3600e3).length;
-  const late = state.assignments.filter(a => a.due < now).length;
+  const dueToday = state.assignments.filter(a => a.due && isSameDay(a.due, todayStart)).length;
+  const dueTomorrow = state.assignments.filter(a => a.due && isSameDay(a.due, tomorrowStart)).length;
+  const upcoming = state.assignments.filter(a => a.due && a.due > tomorrowStart && (a.due - now) <= 7 * 24 * 3600e3).length;
+  const late = state.assignments.filter(a => a.due && a.due < now).length;
 
   const set = (id, v) => (document.getElementById(id).textContent = String(v));
 
