@@ -15,13 +15,16 @@
   </header>
 
   <main class="container">
-    <!-- Summary chips -->
-    <div class="chips" style="margin-bottom:10px">
-      <span class="chip"><b>Late:</b> <span id="sumLate">0</span></span>
-      <span class="chip"><b>Today:</b> <span id="sumToday">0</span></span>
-      <span class="chip"><b>Tomorrow:</b> <span id="sumTomorrow">0</span></span>
-      <span class="chip"><b>Upcoming:</b> <span id="sumUpcoming">0</span></span>
-      <span class="chip"><b>Done:</b> <span id="sumDone">0</span></span>
+    <!-- Futuristic status bar (click any tile to toggle its filter) -->
+    <div class="statusbar">
+      <div class="statrow">
+        <div class="stat late toggle" data-key="Late"><span class="label">Late</span><span id="kLate" class="count">0</span></div>
+        <div class="stat today toggle" data-key="Today"><span class="label">Today</span><span id="kToday" class="count">0</span></div>
+        <div class="stat tom toggle" data-key="Tomorrow"><span class="label">Tomorrow</span><span id="kTom" class="count">0</span></div>
+        <div class="stat up toggle" data-key="Upcoming"><span class="label">Upcoming</span><span id="kUp" class="count">0</span></div>
+        <div class="stat sub toggle" data-key="Submitted"><span class="label">Submitted</span><span id="kSub" class="count">0</span></div>
+        <div class="stat ret toggle" data-key="Returned"><span class="label">Returned</span><span id="kRet" class="count">0</span></div>
+      </div>
     </div>
 
     <div class="controls">
@@ -30,12 +33,13 @@
         <button id="syncBtn" class="btn primary">Sync Classroom</button>
       </div>
       <div class="chips">
-        <label class="chip"><input id="fLate" type="checkbox" checked> <span>Late</span></label>
-        <label class="chip"><input id="fToday" type="checkbox" checked> <span>Due Today</span></label>
-        <label class="chip"><input id="fTomorrow" type="checkbox" checked> <span>Due Tomorrow</span></label>
-        <label class="chip"><input id="fUpcoming" type="checkbox" checked> <span>Upcoming</span></label>
-        <label class="chip"><input id="fDone" type="checkbox"> <span>Completed</span></label>
-        <label class="chip"><input id="fBypassed" type="checkbox"> <span>Bypassed</span></label>
+        <label class="chip"><input id="fLate"      type="checkbox" checked> <span>Late</span></label>
+        <label class="chip"><input id="fToday"     type="checkbox" checked> <span>Due Today</span></label>
+        <label class="chip"><input id="fTomorrow"  type="checkbox" checked> <span>Due Tomorrow</span></label>
+        <label class="chip"><input id="fUpcoming"  type="checkbox" checked> <span>Upcoming</span></label>
+        <label class="chip"><input id="fBypassed"  type="checkbox">         <span>Bypassed</span></label>
+        <label class="chip"><input id="fSubmitted" type="checkbox">         <span>Submitted</span></label>
+        <label class="chip"><input id="fReturned"  type="checkbox">         <span>Returned</span></label>
       </div>
     </div>
 
@@ -109,6 +113,17 @@
               <button id="testEmailBtn" type="button" class="btn">Send Test Email</button>
             </div>
           </div>
+        </section>
+
+        <!-- NEW: Bypass Manager -->
+        <section class="panel">
+          <h4>Bypass Manager</h4>
+          <div class="small muted">Bypassed items are hidden unless the “Bypassed” filter is enabled. You can remove bypass below.</div>
+          <div class="row gap">
+            <button id="refreshBypass" class="btn">Refresh</button>
+            <button id="unbypassAll" class="btn">Un-bypass All</button>
+          </div>
+          <div id="bypassList" class="list"></div>
         </section>
 
         <div class="row end"><button type="button" id="saveAdmin" class="btn primary">Save</button></div>
