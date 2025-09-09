@@ -1,135 +1,119 @@
-<!doctype html>
-<html lang="en" class="h-full antialiased">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Homework Pro</title>
-  <meta name="color-scheme" content="dark light" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Ctext y='50' x='10' font-size='48'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <title>Homework — The European</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body>
-  <header class="glass header">
-    <div class="wrap header-inner">
-      <div class="brand">
-        <div class="brand-icon">📚</div>
-        <div>
-          <div class="brand-title">Homework Pro</div>
-          <div class="brand-sub">Manage past, present, and upcoming assignments</div>
-        </div>
-      </div>
-      <div class="toolbar">
-        <button id="syncBtn" class="btn">Sync Classroom</button>
-        <button id="notifyBtn" class="btn btn-mint">Send Reminders</button>
-        <span id="syncStatus" class="muted small" style="margin-left:8px"></span>
-      </div>
+  <header class="topbar">
+    <div class="brand">Homework</div>
+    <div class="actions">
+      <button id="adminBtn" class="btn ghost">Admin</button>
     </div>
   </header>
 
-  <!-- Diagnostics banner (shows endpoint + last error if any) -->
-  <div id="diag" class="wrap small muted" style="margin:10px 0 0 0; display:none"></div>
+  <main class="container">
+    <div class="controls">
+      <div class="row">
+        <input id="searchInput" class="input" placeholder="Search homework (title, class, notes, status)…" />
+        <button id="syncBtn" class="btn primary">Sync Classroom</button>
+      </div>
+      <div class="chips">
+        <label class="chip"><input id="toggleDueSoon" type="checkbox" checked> <span>Due Soon</span></label>
+        <label class="chip"><input id="toggleLate" type="checkbox" checked> <span>Late</span></label>
+        <label class="chip"><input id="toggleCompleted" type="checkbox"> <span>Completed</span></label>
+        <label class="chip"><input id="toggleBypassed" type="checkbox"> <span>Bypassed</span></label>
+      </div>
+    </div>
 
-  <!-- Stats -->
-  <main class="wrap main">
-    <section class="row cols-4">
-      <div class="card glass"><div class="muted">Due Today</div><div id="statDueToday" class="stat-num">0</div><div id="statDueTodayHint" class="stat-hint">—</div></div>
-      <div class="card glass"><div class="muted">Due Tomorrow</div><div id="statDueTomorrow" class="stat-num">0</div><div id="statDueTomorrowHint" class="stat-hint">—</div></div>
-      <div class="card glass"><div class="muted">Upcoming (7d)</div><div id="statUpcoming" class="stat-num">0</div><div id="statUpcomingHint" class="stat-hint">—</div></div>
-      <div class="card glass"><div class="muted">Late</div><div id="statLate" class="stat-num danger">0</div><div id="statLateHint" class="stat-hint">—</div></div>
-    </section>
-
-    <!-- Filters -->
-    <section class="card glass filters">
-      <div class="row cols-4">
-        <label><div class="muted label">Student</div><select id="filterStudent"><option value="">All</option></select></label>
-        <label><div class="muted label">Course</div><select id="filterCourse"><option value="">All</option></select></label>
-        <label><div class="muted label">Status</div>
-          <select id="filterStatus">
-            <option value="">Any</option><option>DUE_TODAY</option><option>DUE_TOMORROW</option><option>UPCOMING</option><option>LATE</option><option>COMPLETED</option>
-          </select>
-        </label>
-        <label><div class="muted label">Window</div>
-          <select id="filterWindow">
-            <option>ALL</option><option>TODAY</option><option>TOMORROW</option><option>WEEK</option><option>PAST</option>
-          </select>
-        </label>
-      </div>
-      <div class="toolbar end">
-        <button id="addRouteBtn" class="btn">Add Recipient</button>
-        <button id="manageTemplatesBtn" class="btn">Templates</button>
-      </div>
-    </section>
-
-    <!-- Table -->
-    <section class="glass table-wrap">
-      <div class="table-head">
-        <div class="table-title">Assignments</div>
-        <div class="toolbar">
-          <input id="searchBox" type="search" placeholder="Search…">
-          <select id="sortSelect">
-            <option value="dueAsc">Sort: Due ↑</option>
-            <option value="dueDesc">Sort: Due ↓</option>
-            <option value="courseAsc">Course A–Z</option>
-            <option value="courseDesc">Course Z–A</option>
-          </select>
-        </div>
-      </div>
-      <div class="table-scroll">
-        <table class="table">
-          <thead><tr class="muted"><th>Course</th><th>Title</th><th>Student</th><th>Due</th><th>Status</th><th class="right">Actions</th></tr></thead>
-          <tbody id="assignmentTbody"></tbody>
-        </table>
-        <div id="emptyState" class="muted empty">No assignments to display.</div>
-      </div>
-      <div class="table-foot">
-        <div id="tableCount" class="muted small">0 items</div>
-        <div class="toolbar">
-          <button id="prevPage" class="btn" disabled>Prev</button>
-          <button id="nextPage" class="btn">Next</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Recipients -->
-    <section class="card glass">
-      <div class="row between">
-        <div class="section-title">Recipients & Routing</div>
-        <button id="refreshRoutesBtn" class="btn">Refresh</button>
-      </div>
-      <div id="routesGrid" class="routes-grid"></div>
-    </section>
+    <div id="loading" class="loading hidden">Loading…</div>
+    <div id="empty" class="empty hidden">No homework found.</div>
+    <section id="cards" class="cards"></section>
   </main>
 
-  <!-- Route modal (unchanged structure; JS wires it) -->
-  <dialog id="routeModal">
-    <form method="dialog" class="glass modal">
-      <div class="row between">
-        <div id="routeModalTitle" class="modal-title">Add Recipient</div>
-        <button value="cancel" class="btn">✕</button>
+  <!-- Admin Modal -->
+  <dialog id="adminModal" class="modal">
+    <form method="dialog" class="modal-card" id="adminForm">
+      <div class="modal-head">
+        <h3>Recipients &amp; Routing</h3>
+        <button type="button" id="adminClose" class="icon-btn" aria-label="Close">✕</button>
       </div>
-      <div class="row cols-2 modal-grid">
-        <label class="muted">Student<br><select id="routeStudent" class="w100"></select></label>
-        <label class="muted">Channel<br><select id="routeChannel"><option>SMS</option><option>EMAIL</option></select></label>
-        <label class="muted">Destination<br><input id="routeDestination" placeholder="+14175550123 or name@example.com"></label>
-        <label class="muted">Policy<br>
-          <select id="routePolicy">
-            <option value='{"when":"DUE_TOMORROW","hour":19,"tz":"America/Chicago"}'>Due Tomorrow, 7:00pm</option>
-            <option value='{"when":"DUE_TODAY","hour":17,"tz":"America/Chicago"}'>Due Today, 5:00pm</option>
-          </select>
-        </label>
-        <label class="muted col-span-2">Template<br><select id="routeTemplate" class="w100"></select></label>
+
+      <div id="adminGate" class="gate">
+        <p class="muted">Enter admin password to manage recipients, templates, and SMS rules.</p>
+        <input id="adminPassword" class="input" type="password" placeholder="Admin password" autocomplete="current-password">
+        <button id="adminUnlock" type="button" class="btn primary">Unlock</button>
+        <div id="adminErr" class="error hidden"></div>
       </div>
-      <div class="row end gap">
-        <button value="cancel" class="btn">Cancel</button>
-        <button id="routeSaveBtn" type="button" class="btn btn-mint">Save</button>
+
+      <div id="adminBody" class="admin hidden">
+        <section class="panel">
+          <h4>Recipients</h4>
+          <div id="recipientsList" class="list"></div>
+          <div class="row gap">
+            <input id="recName" class="input" placeholder="Name">
+            <input id="recPhone" class="input" placeholder="+1XXXXXXXXXX">
+            <button id="addRecipient" type="button" class="btn">Add</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h4>Templates</h4>
+          <div id="templatesList" class="list"></div>
+          <div class="col gap">
+            <input id="tmplName" class="input" placeholder="Template name (e.g., due_soon)">
+            <textarea id="tmplBody" class="textarea" rows="3" placeholder="Message body. Vars: {title} {course} {dueDate} {dueIn} {status}"></textarea>
+            <button id="addTemplate" type="button" class="btn">Save Template</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h4>SMS Rules</h4>
+          <div class="grid-2">
+            <label class="field">
+              <span>Enable SMS</span>
+              <input id="smsEnable" type="checkbox">
+            </label>
+            <label class="field">
+              <span>Quiet Hours (HH:MM–HH:MM)</span>
+              <input id="smsQuiet" class="input" placeholder="21:00-07:00">
+            </label>
+            <label class="field">
+              <span>Send when <em>Due Soon</em> (hours before due)</span>
+              <input id="smsDueSoonHrs" class="input" type="number" min="0" value="24">
+            </label>
+            <label class="field">
+              <span>Send when becomes <em>Late</em></span>
+              <input id="smsOnLate" type="checkbox">
+            </label>
+            <label class="field">
+              <span>Daily Summary Time (local HH:MM)</span>
+              <input id="smsSummaryTime" class="input" placeholder="19:30">
+            </label>
+            <label class="field">
+              <span>Template for alerts</span>
+              <input id="smsAlertTemplate" class="input" placeholder="due_soon">
+            </label>
+          </div>
+          <p class="muted small">Note: SMS is sent by the Vercel function <code>/api/sms</code>. Configure your Twilio env vars there.</p>
+        </section>
+
+        <div class="row end">
+          <button type="button" id="saveAdmin" class="btn primary">Save</button>
+        </div>
       </div>
     </form>
   </dialog>
 
-  <!-- Toast -->
-  <div class="toast" id="toast" style="display:none"><div class="card glass" id="toastMsg">Saved.</div></div>
-
-  <!-- Entry (cache-busted) -->
-  <script type="module" src="assets/js/main.js?v=3"></script>
+  <script type="module" src="assets/js/config.js"></script>
+  <script type="module" src="assets/js/state.js"></script>
+  <script type="module" src="assets/js/classroom.js"></script>
+  <script type="module" src="assets/js/sms.js"></script>
+  <script type="module" src="assets/js/ui.js"></script>
 </body>
 </html>
