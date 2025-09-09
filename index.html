@@ -56,11 +56,18 @@
         <button type="button" id="adminClose" class="icon-btn" aria-label="Close">✕</button>
       </div>
 
+      <!-- Professional “lock screen” style gate -->
       <div id="adminGate" class="gate">
-        <p class="muted">Enter admin password to manage recipients, templates, and notifications.</p>
-        <input id="adminPassword" class="input" type="password" placeholder="Admin password">
-        <button id="adminUnlock" type="button" class="btn primary">Unlock</button>
-        <div id="adminErr" class="error hidden"></div>
+        <div class="auth-box">
+          <div class="auth-title">Administrator Access</div>
+          <div class="auth-sub">Enter your admin password to manage recipients, templates, and notifications.</div>
+          <div class="input-wrap">
+            <input id="adminPassword" class="input auth-input" type="password" placeholder="Admin password">
+            <button type="button" class="eyebtn" id="adminPwToggle" aria-label="Show password">👁</button>
+          </div>
+          <div id="adminErr" class="error hidden"></div>
+          <div class="row end"><button id="adminUnlock" type="button" class="btn primary">Unlock</button></div>
+        </div>
       </div>
 
       <div id="adminBody" class="admin hidden">
@@ -68,8 +75,8 @@
           <h4>Recipients</h4>
           <div id="recipientsList" class="list"></div>
           <div class="row gap">
-            <input id="recName" class="input" placeholder="Name">
-            <input id="recEmail" class="input" placeholder="Email (for email channel)">
+            <input id="recName"   class="input" placeholder="Name">
+            <input id="recEmail"  class="input" placeholder="Email (for email channel)">
             <input id="recChatId" class="input" placeholder="Telegram chat_id (optional)">
             <button id="addRecipient" type="button" class="btn">Add</button>
           </div>
@@ -115,10 +122,10 @@
           </div>
         </section>
 
-        <!-- NEW: Bypass Manager -->
+        <!-- Bypass Manager -->
         <section class="panel">
           <h4>Bypass Manager</h4>
-          <div class="small muted">Bypassed items are hidden unless the “Bypassed” filter is enabled. You can remove bypass below.</div>
+          <div class="small muted">Bypassed items are hidden unless the “Bypassed” filter is enabled.</div>
           <div class="row gap">
             <button id="refreshBypass" class="btn">Refresh</button>
             <button id="unbypassAll" class="btn">Un-bypass All</button>
@@ -127,6 +134,28 @@
         </section>
 
         <div class="row end"><button type="button" id="saveAdmin" class="btn primary">Save</button></div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Reusable professional password confirmation modal -->
+  <dialog id="pwConfirmModal" class="modal">
+    <form method="dialog" class="modal-card small" id="pwConfirmForm">
+      <div class="modal-head">
+        <h3 id="pwTitle">Admin Confirmation</h3>
+        <button type="button" id="pwClose" class="icon-btn" aria-label="Close">✕</button>
+      </div>
+      <div class="auth-box">
+        <div class="auth-sub" id="pwReason">This action requires administrator authorization.</div>
+        <div class="input-wrap">
+          <input id="pwConfirmInput" class="input auth-input" type="password" placeholder="Enter admin password">
+          <button type="button" class="eyebtn" id="pwToggle" aria-label="Show password">👁</button>
+        </div>
+        <div id="pwErr" class="error hidden"></div>
+        <div class="row end">
+          <button value="cancel" class="btn">Cancel</button>
+          <button id="pwConfirmBtn" type="button" class="btn primary">Confirm</button>
+        </div>
       </div>
     </form>
   </dialog>
