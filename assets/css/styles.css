@@ -9,7 +9,7 @@
 
   /* Status colors */
   --late:#ff4d6d;      /* red */
-  --today:#ff4d6d;     /* flashing red */
+  --today:#a855f7;     /* PURPLE for DUE TODAY (was red) */
   --tom:#ffb44d;       /* flashing orange */
   --up:#41f3a6;        /* green */
   --done:#7ca7ff;      /* (kept for future) */
@@ -21,6 +21,7 @@
   --glow-red:0 0 12px rgba(255,77,109,.50);
   --glow-orange:0 0 12px rgba(255,180,77,.45);
   --glow-green:0 0 12px rgba(65,243,166,.35);
+  --glow-purple:0 0 12px rgba(168,85,247,.55);  /* NEW for DUE TODAY */
 
   /* Radii & fixed sizes */
   --radius:16px;
@@ -66,7 +67,7 @@ body{
 .stat .label{font-size:12px;color:#c8d6ea;letter-spacing:.3px}
 .stat .count{font-weight:800}
 .stat.late{border-color:var(--late); box-shadow:var(--glow-red)}
-.stat.today{border-color:var(--today); animation:pulseRed 1.15s infinite}
+.stat.today{border-color:var(--today); box-shadow:var(--glow-purple); animation:pulsePurple 1.15s infinite} /* UPDATED */
 .stat.tom{border-color:var(--tom); animation:pulseOrange 1.35s infinite}
 .stat.up{border-color:var(--up); box-shadow:var(--glow-green)}
 .stat.sub{border-color:var(--sub)}
@@ -75,8 +76,9 @@ body{
 .stat.toggle:active{transform:scale(.98)}
 .stat.off{opacity:.45; filter:saturate(60%); animation:none; box-shadow:none; border-color:#1a2436}
 
-@keyframes pulseRed   {0%,100%{box-shadow:0 0 0 0 rgba(255,77,109,.45)}60%{box-shadow:0 0 0 10px rgba(255,77,109,0)}}
-@keyframes pulseOrange{0%,100%{box-shadow:0 0 0 0 rgba(255,180,77,.45)}60%{box-shadow:0 0 0 10px rgba(255,180,77,0)}}
+@keyframes pulseRed    {0%,100%{box-shadow:0 0 0 0 rgba(255,77,109,.45)}60%{box-shadow:0 0 0 10px rgba(255,77,109,0)}}
+@keyframes pulseOrange {0%,100%{box-shadow:0 0 0 0 rgba(255,180,77,.45)}60%{box-shadow:0 0 0 10px rgba(255,180,77,0)}}
+@keyframes pulsePurple {0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,.45)}60%{box-shadow:0 0 0 10px rgba(168,85,247,0)}} /* NEW */
 
 /* ======= Layout ======= */
 .container{max-width:1180px;margin:0 auto;padding:16px}
@@ -124,7 +126,7 @@ body{
 /* Status dot next to title */
 .dot{width:10px;height:10px;border-radius:50%}
 .dot.late{background:var(--late); box-shadow:var(--glow-red)}
-.dot.today{background:var(--today); box-shadow:var(--glow-red); animation:pulseDot 1.1s infinite}
+.dot.today{background:var(--today); box-shadow:var(--glow-purple); animation:pulsePurple 1.1s infinite} /* UPDATED */
 .dot.tomorrow{background:var(--tom); box-shadow:var(--glow-orange); animation:pulseDot 1.3s infinite}
 .dot.up{background:var(--up); box-shadow:var(--glow-green)}
 .dot.done{background:var(--done)}
@@ -136,13 +138,13 @@ body{
 /* BADGES — PERFECTLY CENTERED LABELS */
 .badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .badge{
-  display:inline-grid; place-items:center;             /* centers text horizontally & vertically */
-  height:var(--badge-h); padding:0 14px;               /* no vertical padding; exact height controls vertical centering */
+  display:inline-grid; place-items:center;             /* centers text */
+  height:var(--badge-h); padding:0 14px;
   border-radius:999px; border:2px solid var(--ring);
   font-size:12px; font-weight:800; letter-spacing:.4px; line-height:1; white-space:nowrap;
 }
 .badge.late{border-color:var(--late); color:#ffd6de}
-.badge.today{border-color:var(--today); color:#ffd6de; animation:pulseRed 1.15s infinite}
+.badge.today{border-color:var(--today); color:#f3e8ff; animation:pulsePurple 1.15s infinite} /* UPDATED */
 .badge.tomorrow{border-color:var(--tom); color:#ffe9cc; animation:pulseOrange 1.35s infinite}
 .badge.up{border-color:var(--up); color:#e7fff6}
 .badge.done{border-color:var(--done); color:#d7e4ff}
@@ -212,21 +214,31 @@ body{
 }
 .toast.show{display:flex}
 
-/* === MOBILE STACK: make status chips one-per-row ============================ */
-/* Overrides the fixed 6-col grid for .statrow                                  */
+/* ======= Responsive ======= */
 
-@media (max-width: 680px){
+/* Stack the status chips on phones: one per row */
+@media (max-width:680px){
   .statusbar{ margin: 8px 0 10px; }
   .statrow{
-    display: grid;
-    grid-template-columns: 1fr;   /* one per row */
-    gap: 10px;                    /* breathing room between chips */
+    display:grid;
+    grid-template-columns:1fr; /* one per row */
+    gap:10px;
   }
-  .stat{
-    padding: 14px 16px;           /* bigger touch target */
-    align-items: center;
-    justify-content: space-between;
-  }
-  .stat .label{ font-size: 14px; white-space: nowrap; }
-  .stat .count{ font-size: 16px; font-weight: 800; }
+  .stat{ padding:14px 16px; }
+  .stat .label{ font-size:14px; white-space:nowrap; }
+  .stat .count{ font-size:16px; font-weight:800; }
+}
+
+@media (max-width:480px){
+  :root{ --badge-h:28px; }
+  .badge{ padding:0 12px; font-size:11px; }
+  .grid-2{grid-template-columns:1fr}  /* stack form fields on phones */
+}
+
+@media (min-width:640px){ .cards{grid-template-columns:1fr 1fr} }
+@media (min-width:1024px){ .cards{grid-template-columns:1fr 1fr 1fr} }
+
+/* ======= Motion Safety ======= */
+@media (prefers-reduced-motion:reduce){
+  .badge.today,.badge.tomorrow,.dot.today,.dot.tomorrow,.stat.today,.stat.tom{animation:none}
 }
