@@ -1,3 +1,4 @@
+// Simple local storage wrapper
 export const store = {
   get(key, fallback){
     try{ return JSON.parse(localStorage.getItem(key)) ?? fallback; }catch{ return fallback; }
@@ -5,12 +6,16 @@ export const store = {
   set(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 };
 
-// recipients: [{id, name, phone}]
+// Recipients: [{id, name, phone}]
 export function loadRecipients(){ return store.get("recipients", []); }
 export function saveRecipients(list){ store.set("recipients", list); }
 
-// templates: { name: body }
-export function loadTemplates(){ return store.get("templates", { due_soon: "Reminder: {title} for {course} is due {dueDate} ({dueIn}). Status: {status}." }); }
+// Templates: { name: body }
+export function loadTemplates(){
+  return store.get("templates", {
+    due_soon: "Reminder: {title} for {course} is due {dueDate} ({dueIn}). Status: {status}."
+  });
+}
 export function saveTemplates(map){ store.set("templates", map); }
 
 // SMS rules/settings
@@ -30,6 +35,10 @@ export function saveSmsSettings(s){ store.set("smsSettings", s); }
 export function loadBypass(){ return store.get("bypassMap", {}); }
 export function saveBypass(map){ store.set("bypassMap", map); }
 
-// last-run timestamps to avoid spamming SMS
+// last-run timestamps to avoid spamming notifications
 export function loadLastSent(){ return store.get("lastSent", {}); }
 export function saveLastSent(map){ store.set("lastSent", map); }
+
+// Telegram settings
+export function loadTelegram(){ return store.get("telegram", { enabled:false, botToken:"", chatId:"" }); }
+export function saveTelegram(v){ store.set("telegram", v); }

@@ -1,11 +1,15 @@
 import { CONFIG } from "./config.js";
 import { syncFromClassroom } from "./classroom.js";
-import { loadBypass, saveBypass, loadRecipients, saveRecipients, loadTemplates, saveTemplates, loadSmsSettings, saveSmsSettings } from "./state.js";
-import { sendTestSmsToAll } from "./sms.js";
+import {
+  loadBypass, saveBypass,
+  loadRecipients, saveRecipients,
+  loadTemplates, saveTemplates,
+  loadSmsSettings, saveSmsSettings,
+  loadTelegram, saveTelegram
+} from "./state.js";
 
 const el = sel => document.querySelector(sel);
 const cards = el("#cards");
-const loading = el("#loading");
 const empty = el("#empty");
 
 let assignments = [];
@@ -16,7 +20,6 @@ function statusClass(s){
   if(s==="BYPASSED") return "byp";
   return "due";
 }
-
 function matchesSearch(a, q){
   if(!q) return true;
   q = q.toLowerCase();
@@ -25,7 +28,6 @@ function matchesSearch(a, q){
           a.notes?.toLowerCase().includes(q) ||
           a.status?.toLowerCase().includes(q));
 }
-
 function shouldShow(a){
   const q = el("#searchInput").value.trim();
   const showLate = el("#toggleLate").checked;
@@ -40,7 +42,6 @@ function shouldShow(a){
   if(a.status==="DONE"||a.status==="COMPLETED") return showDone;
   return showDue;
 }
-
 function fmtDate(iso){ return iso ? new Date(iso).toLocaleString() : "—"; }
 
 function render(){
@@ -176,6 +177,7 @@ function loadAdminUI(){
     tlist.appendChild(row);
   });
 
+  // SMS settings
   const s = loadSmsSettings();
   el("#smsEnable").checked = !!s.enabled;
   el("#smsQuiet").value = s.quiet||"";
@@ -183,6 +185,12 @@ function loadAdminUI(){
   el("#smsOnLate").checked = !!s.onLate;
   el("#smsSummaryTime").value = s.summaryTime||"";
   el("#smsAlertTemplate").value = s.alertTemplate||"";
+
+  // Telegram settings
+  const tg = loadTelegram();
+  el("#tgEnable").checked = !!tg.enabled;
+  el("#tgToken").value = tg.botToken || "";
+  el("#tgChat").value = tg.chatId || "";
 }
 
 el("#addRecipient").addEventListener("click", ()=>{
@@ -195,7 +203,6 @@ el("#addRecipient").addEventListener("click", ()=>{
   el("#recName").value = ""; el("#recPhone").value = "";
   loadAdminUI();
 });
-
 el("#addTemplate").addEventListener("click", ()=>{
   const name = el("#tmplName").value.trim();
   const body = el("#tmplBody").value.trim();
@@ -204,7 +211,6 @@ el("#addTemplate").addEventListener("click", ()=>{
   el("#tmplName").value=""; el("#tmplBody").value="";
   loadAdminUI();
 });
-
 el("#saveAdmin").addEventListener("click", ()=>{
   const s = {
     enabled: el("#smsEnable").checked,
@@ -215,50 +221,43 @@ el("#saveAdmin").addEventListener("click", ()=>{
     alertTemplate: el("#smsAlertTemplate").value.trim() || "due_soon"
   };
   saveSmsSettings(s);
+
+  const tgNew = {
+    enabled: el("#tgEnable").checked,
+    botToken: el("#tgToken").value.trim(),
+    chatId: el("#tgChat").value.trim()
+  };
+  saveTelegram(tgNew);
+
   alert("Saved.");
 });
 
-// Test SMS sender
+// Test SMS sender (uses existing /api/sms)
 const testBtn = el("#sendTestSms");
 const testBody = el("#smsTestBody");
 const testStatus = el("#sendTestSmsStatus");
-
 if (testBtn) {
   testBtn.addEventListener("click", async () => {
     const pwd = prompt("Admin password to send test SMS:");
-    if (pwd !== CONFIG.adminPassword) { 
-      alert("Incorrect password."); 
-      return; 
-    }
+    if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
 
-    testBtn.disabled = true; 
-    testStatus.textContent = "Sending…";
-
+    testBtn.disabled = true; testStatus.textContent = "Sending…";
     try {
       const body = (testBody?.value || "Test message").trim();
-      const recipients = loadRecipients();   // ← use it directly
+      const recipients = loadRecipients();
       if (!recipients.length) throw new Error("No recipients configured");
 
       const payload = {
         password: CONFIG.adminPassword,
         messages: recipients.map(r => ({ to: r.phone, body }))
       };
-
       const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/sms");
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify(payload)
-      });
-
+      const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
       const rsp = await res.json();
       if (!rsp.ok) throw new Error(rsp.error || "Unknown SMS error");
 
-      const lines = (rsp.results || []).map(r => 
-        r.ok ? `✅ ${r.to} via ${r.via || "sms"} (id: ${r.messageId})` 
-             : `❌ ${r.to} — ${r.error}`
-      );
-
+      const lines = (rsp.results || []).map(r => r.ok ? `✅ ${r.to} ${r.via ? `(via ${r.via})`:""}`
+                                                     : `❌ ${r.to} — ${r.error}`);
       testStatus.textContent = `Sent ${rsp.sent} / ${(rsp.results||[]).length}`;
       alert(lines.join("\n") || `Sent ${rsp.sent}`);
     } catch (e) {
@@ -271,3 +270,42 @@ if (testBtn) {
     }
   });
 }
+
+// Test Telegram sender
+const tgBtn = el("#sendTestTelegram");
+const tgStatus = el("#sendTestTelegramStatus");
+if (tgBtn) {
+  tgBtn.addEventListener("click", async () => {
+    const pwd = prompt("Admin password to send test:");
+    if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+
+    const tg = loadTelegram();
+    if (!tg.enabled) { alert("Enable Telegram first."); return; }
+    if (!tg.botToken || !tg.chatId) { alert("Enter bot token and chat ID."); return; }
+
+    tgBtn.disabled = true; tgStatus.textContent = "Sending…";
+    try {
+      const body = (testBody?.value || "Test: Homework alerts are working ✅").trim();
+      const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram");
+      const rsp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ password: CONFIG.adminPassword, token: tg.botToken, chatId: tg.chatId, messages: [body] })
+      }).then(r=>r.json());
+
+      if (!rsp.ok) throw new Error(rsp.error || "Telegram send failed");
+      tgStatus.textContent = `Sent ${rsp.sent} message(s)`;
+      const lines = (rsp.results||[]).map(r => r.ok ? `✅ chat ${r.chatId} (msg ${r.msgId})` : `❌ ${r.chatId} — ${r.error}`);
+      alert(lines.join("\n"));
+    } catch (e) {
+      tgStatus.textContent = "Failed";
+      alert(String(e.message || e));
+    } finally {
+      tgBtn.disabled = false;
+      setTimeout(()=>{ tgStatus.textContent = ""; }, 5000);
+    }
+  });
+}
+
+// First paint
+render();

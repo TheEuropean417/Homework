@@ -1,4 +1,4 @@
-import { loadRecipients, loadTemplates, loadSmsSettings, loadLastSent, saveLastSent } from "./state.js";
+import { loadRecipients, loadTemplates, loadSmsSettings, loadLastSent, saveLastSent, loadTelegram } from "./state.js";
 import { CONFIG } from "./config.js";
 
 function nowISO(){ return new Date().toISOString(); }
@@ -20,19 +20,16 @@ function safeId(a){ return a.id || `${a.title}-${a.dueDateISO}`; }
 
 export async function evaluateAndMaybeSend(assignments){
   const settings = loadSmsSettings();
-  if(!settings.enabled) return;
-  if(inQuietHours(settings.quiet)) return;
-
   const templates = loadTemplates();
-  const tmpl = templates[settings.alertTemplate] || "Reminder: {title} due {dueDate} ({dueIn}).";
-
-  const recipients = loadRecipients();
-  if(!recipients.length) return;
-
   const last = loadLastSent();
-  const toSend = [];
+  const recipients = loadRecipients();
   const now = new Date();
 
+  // Quiet hours: suppress everything (affects both Telegram and SMS)
+  if(inQuietHours(settings.quiet)) return;
+
+  // Decide which assignments should trigger alerts
+  const toSend = [];
   for(const a of assignments){
     if(!a.dueDateISO) continue;
     const due = new Date(a.dueDateISO);
@@ -58,6 +55,48 @@ export async function evaluateAndMaybeSend(assignments){
 
   if(!toSend.length) return;
 
+  // ---- Telegram path (preferred free option) ----
+  const tg = loadTelegram();
+  if (tg.enabled && tg.botToken && tg.chatId) {
+    const bodyFor = (a) =>
+      (templates[settings.alertTemplate] || "Reminder: {title} due {dueDate} ({dueIn}).")
+        .replaceAll("{title}", a.title)
+        .replaceAll("{course}", a.course||"")
+        .replaceAll("{dueDate}", a.dueDateISO ? new Date(a.dueDateISO).toLocaleString() : "N/A")
+        .replaceAll("{dueIn}", a.dueDateISO ? fmtDue(new Date(a.dueDateISO)-now) : "N/A")
+        .replaceAll("{status}", a.status||"");
+
+    const messages = toSend.map(({ a }) => bodyFor(a));
+    const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram");
+    try{
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({
+          password: CONFIG.adminPassword,
+          token: tg.botToken,
+          chatId: tg.chatId,
+          messages
+        })
+      });
+      if(!res.ok){
+        const txt = await res.text().catch(()=>res.statusText);
+        console.warn("Telegram send failed:", res.status, txt);
+      }else{
+        const sentAt = nowISO();
+        for (const {key} of toSend) last[key] = sentAt;
+        saveLastSent(last);
+      }
+    }catch(e){
+      console.warn("Telegram send exception:", e);
+    }
+    return; // skip SMS below
+  }
+
+  // ---- SMS path (only if enabled and Telegram not used) ----
+  if(!settings.enabled || !recipients.length) return;
+
+  const tmpl = templates[settings.alertTemplate] || "Reminder: {title} due {dueDate} ({dueIn}).";
   const messages = toSend.map(({key,a})=>{
     const body = tmpl
       .replaceAll("{title}", a.title)
@@ -70,50 +109,26 @@ export async function evaluateAndMaybeSend(assignments){
 
   const payload = {
     password: CONFIG.adminPassword,
-    messages: loadRecipients().map(r => messages.map(m => ({
+    messages: recipients.map(r => messages.map(m => ({
       to: r.phone, body: m.body, tag: m.key
     }))).flat()
   };
 
-  const res = await fetch(CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/sms"),{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  if(!res.ok){
-    const txt = await res.text().catch(()=>res.statusText);
-    console.warn("SMS send failed:", res.status, txt);
-    return;
+  try {
+    const res = await fetch(CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/sms"),{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const txt = await res.text().catch(()=>res.statusText);
+      console.warn("SMS send failed:", res.status, txt);
+      return;
+    }
+    const sentAt = nowISO();
+    for(const m of messages) last[m.key] = sentAt;
+    saveLastSent(last);
+  } catch(e){
+    console.warn("SMS send exception:", e);
   }
-
-  const sentAt = nowISO();
-  for(const m of messages) last[m.key] = sentAt;
-  saveLastSent(last);
-}
-
-// ---- Test SMS helper ----
-export async function sendTestSmsToAll(message) {
-  const { adminPassword, classroomEndpoints } = CONFIG;
-  const { loadRecipients } = await import("./state.js");
-  const recipients = loadRecipients();
-  if (!recipients.length) throw new Error("No recipients configured");
-
-  const payload = {
-    password: adminPassword,
-    messages: recipients.map(r => ({ to: r.phone, body: (message || "Test message").trim() }))
-  };
-
-  const url = classroomEndpoints[0].replace("/api/classroom", "/api/sms");
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => res.statusText);
-    throw new Error(`SMS API ${res.status}: ${txt}`);
-  }
-  return res.json();
 }
