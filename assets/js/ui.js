@@ -272,30 +272,43 @@ if (testBtn) {
 }
 
 // Test Telegram sender
+// Test Telegram sender (reads current form fields; falls back to saved settings)
 const tgBtn = el("#sendTestTelegram");
 const tgStatus = el("#sendTestTelegramStatus");
+
 if (tgBtn) {
   tgBtn.addEventListener("click", async () => {
     const pwd = prompt("Admin password to send test:");
     if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
 
-    const tg = loadTelegram();
-    if (!tg.enabled) { alert("Enable Telegram first."); return; }
-    if (!tg.botToken || !tg.chatId) { alert("Enter bot token and chat ID."); return; }
+    // Read live values from the form first
+    const enabledNow  = document.getElementById("tgEnable")?.checked;
+    const tokenNow    = document.getElementById("tgToken")?.value.trim();
+    const chatNow     = document.getElementById("tgChat")?.value.trim();
+
+    // Fallback to saved values if fields are empty
+    const saved = loadTelegram?.() || { enabled:false, botToken:"", chatId:"" };
+    const enabled = (typeof enabledNow === "boolean") ? enabledNow : !!saved.enabled;
+    const botToken = tokenNow || saved.botToken;
+    const chatId   = chatNow  || saved.chatId;
+
+    if (!enabled) { alert("Enable Telegram first (toggle the checkbox)."); return; }
+    if (!botToken || !chatId) { alert("Enter bot token and chat ID."); return; }
 
     tgBtn.disabled = true; tgStatus.textContent = "Sending…";
     try {
-      const body = (testBody?.value || "Test: Homework alerts are working ✅").trim();
+      const body = (document.getElementById("smsTestBody")?.value || "Test: Homework alerts are working ✅").trim();
       const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram");
       const rsp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ password: CONFIG.adminPassword, token: tg.botToken, chatId: tg.chatId, messages: [body] })
+        body: JSON.stringify({ password: CONFIG.adminPassword, token: botToken, chatId, messages: [body] })
       }).then(r=>r.json());
 
       if (!rsp.ok) throw new Error(rsp.error || "Telegram send failed");
       tgStatus.textContent = `Sent ${rsp.sent} message(s)`;
-      const lines = (rsp.results||[]).map(r => r.ok ? `✅ chat ${r.chatId} (msg ${r.msgId})` : `❌ ${r.chatId} — ${r.error}`);
+      const lines = (rsp.results||[]).map(r => r.ok ? `✅ chat ${r.chatId} (msg ${r.msgId})`
+                                                    : `❌ ${r.chatId} — ${r.error}`);
       alert(lines.join("\n"));
     } catch (e) {
       tgStatus.textContent = "Failed";
@@ -306,6 +319,3 @@ if (tgBtn) {
     }
   });
 }
-
-// First paint
-render();
