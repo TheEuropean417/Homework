@@ -21,12 +21,16 @@
       <div class="toolbar">
         <button id="syncBtn" class="btn">Sync Classroom</button>
         <button id="notifyBtn" class="btn btn-mint">Send Reminders</button>
+        <span id="syncStatus" class="muted small" style="margin-left:8px"></span>
       </div>
     </div>
   </header>
 
+  <!-- Diagnostics banner (shows endpoint + last error if any) -->
+  <div id="diag" class="wrap small muted" style="margin:10px 0 0 0; display:none"></div>
+
+  <!-- Stats -->
   <main class="wrap main">
-    <!-- Stats -->
     <section class="row cols-4">
       <div class="card glass"><div class="muted">Due Today</div><div id="statDueToday" class="stat-num">0</div><div id="statDueTodayHint" class="stat-hint">—</div></div>
       <div class="card glass"><div class="muted">Due Tomorrow</div><div id="statDueTomorrow" class="stat-num">0</div><div id="statDueTomorrowHint" class="stat-hint">—</div></div>
@@ -96,7 +100,7 @@
     </section>
   </main>
 
-  <!-- Add/Edit Route Modal -->
+  <!-- Route modal (unchanged structure; JS wires it) -->
   <dialog id="routeModal">
     <form method="dialog" class="glass modal">
       <div class="row between">
@@ -122,26 +126,10 @@
     </form>
   </dialog>
 
-  <!-- Reminder Preview Modal -->
-  <dialog id="reminderModal">
-    <form method="dialog" class="glass modal">
-      <div class="row between">
-        <div class="modal-title">Reminder Preview</div>
-        <button value="cancel" class="btn">✕</button>
-      </div>
-      <div id="reminderSummary" class="muted small" style="margin-top:6px"></div>
-      <div id="reminderList" class="reminder-list"></div>
-      <div class="row end gap" style="margin-top:12px">
-        <button id="copyAllBtn" type="button" class="btn">Copy All</button>
-        <button value="cancel" class="btn btn-mint">Close</button>
-      </div>
-    </form>
-  </dialog>
-
   <!-- Toast -->
   <div class="toast" id="toast" style="display:none"><div class="card glass" id="toastMsg">Saved.</div></div>
 
-  <!-- App -->
-  <script type="module" src="assets/js/main.js"></script>
+  <!-- Entry (cache-busted) -->
+  <script type="module" src="assets/js/main.js?v=3"></script>
 </body>
 </html>

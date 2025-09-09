@@ -13,6 +13,6 @@ async function boot() {
   renderRoutes();
   setupRouteModal();
   wireEvents();
-  await maybeAutoSync();  // auto-pull from Classroom (if enabled in CONFIG)
+  await maybeAutoSync();  // auto-pull from Classroom (Vercel API)
 }
 boot();

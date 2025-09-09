@@ -3,9 +3,8 @@ import { state } from "./state.js";
 import { renderTable, loadFilters } from "./table.js";
 import { refreshStats } from "./stats.js";
 import { renderRoutes } from "./routes.js";
-import { toast } from "./ui.js";
+import { toast, setDiag } from "./ui.js";
 
-// ----- helpers
 function statusFromDue_(due) {
   if (!due) return "UPCOMING";
   const now = new Date();
@@ -17,10 +16,12 @@ function statusFromDue_(due) {
   if (d.toDateString() === tomorrow.toDateString()) return "DUE_TOMORROW";
   return (d - now <= 7*24*3600e3) ? "UPCOMING" : "UPCOMING";
 }
+
 function setSyncStatus(txt) {
   const el = document.getElementById("syncStatus");
   if (el) el.textContent = txt || "";
 }
+
 function renderAll() {
   loadFilters();
   refreshStats();
@@ -28,39 +29,27 @@ function renderAll() {
   renderRoutes();
 }
 
-// ----- primary fetch (CORS normal)
-async function fetchClassroomJSON() {
-  const res = await fetch(CONFIG.classroomEndpoint, { mode: "cors" });
+async function fetchJSON(url) {
+  const res = await fetch(url, { mode: "cors" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
-// ----- JSONP fallback (used when CONFIG.useJsonp === true)
-function fetchClassroomJSONP() {
-  return new Promise((resolve, reject) => {
-    const cbName = "onClassroomJSON_" + Math.random().toString(36).slice(2);
-    const s = document.createElement("script");
-    const url = `${CONFIG.classroomEndpoint}?callback=${cbName}`;
-    window[cbName] = (data) => { resolve(data); cleanup(); };
-    function cleanup(){ try{ delete window[cbName]; }catch{} s.remove(); }
-    s.onerror = () => { reject(new Error("JSONP load failed")); cleanup(); };
-    s.src = url;
-    document.head.appendChild(s);
-  });
-}
-
 export async function syncFromClassroom() {
+  const urls = CONFIG.classroomEndpoints || [];
   try {
-    if (!CONFIG.classroomEndpoint) {
-      toast("No Classroom endpoint configured");
-      return;
-    }
+    if (!urls.length) throw new Error("No classroomEndpoints configured");
     setSyncStatus("Syncing…");
     toast("Syncing from Classroom…");
+    setDiag(`Calling: ${urls.join(" → ")}`);
 
-    const data = CONFIG.useJsonp ? await fetchClassroomJSONP() : await fetchClassroomJSON();
+    let data = null, lastErr = null, used = null;
+    for (const u of urls) {
+      try { data = await fetchJSON(u); used = u; break; }
+      catch (e) { lastErr = e; console.error("Classroom fetch failed:", u, e); }
+    }
+    if (!data) throw lastErr || new Error("No endpoint succeeded");
 
-    // Merge into state
     state.courses = (data.courses || []).map(c => ({ id: String(c.id), name: c.name || "" }));
     state.assignments = (data.assignments || []).map(a => ({
       id: String(a.id),
@@ -73,21 +62,19 @@ export async function syncFromClassroom() {
     }));
 
     renderAll();
-    const t = new Date();
-    setSyncStatus(`Last synced ${t.toLocaleString()}`);
+    const ts = new Date().toLocaleString();
+    setSyncStatus(`Last synced ${ts}`);
+    setDiag(`OK from: ${used} @ ${ts}`);
     toast("Classroom sync complete");
   } catch (err) {
-    console.error(err);
+    console.error("Sync error:", err);
     setSyncStatus("Sync failed");
+    setDiag("Sync failed: " + (err?.message || err));
     toast("Classroom sync failed");
   }
 }
 
-// auto-sync hook (optional)
 export async function maybeAutoSync() {
-  if (CONFIG.autoSyncOnLoad) {
-    setTimeout(() => { syncFromClassroom(); }, 300);
-  } else {
-    setSyncStatus("Ready");
-  }
+  setSyncStatus("Ready");
+  if (CONFIG.autoSyncOnLoad) setTimeout(() => { syncFromClassroom(); }, 300);
 }
