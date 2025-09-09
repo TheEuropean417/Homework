@@ -1,133 +1,101 @@
-// homework-api/api/classroom.js
-// Classroom fetch with CORS + student submission states (TURNED_IN, RETURNED, etc.) and 'late'.
-// If googleapis/env are missing, returns { assignments: [] } so UI stays up.
+// assets/js/classroom.js
+// ES module for the browser. Handles syncing from your /api/classroom,
+// normalizes results, triggers notifications, and broadcasts to the UI.
 
-const ALLOW_ORIGINS = [
-  "https://theeuropean417.github.io",
-  "http://localhost:5500",
-  "http://127.0.0.1:5500"
-];
+import { CONFIG } from "./config.js";
+import { evaluateAndMaybeNotify } from "./notify.js";
+import { loadBypass } from "./state.js";
 
-function setCors(req, res) {
-  const origin = req.headers.origin || "";
-  if (ALLOW_ORIGINS.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  } else {
-    res.setHeader("Access-Control-Allow-Origin", ALLOW_ORIGINS[0]);
-    res.setHeader("Vary", "Origin");
-  }
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-}
+let firstSyncDone = false;
 
-function toIsoWithOffset(d) {
-  const tz = -d.getTimezoneOffset(); // minutes east of UTC
-  const sign = tz >= 0 ? "+" : "-";
-  const abs = Math.abs(tz);
-  const hh = String(Math.floor(abs / 60)).padStart(2, "0");
-  const mm = String(abs % 60).padStart(2, "0");
-  return new Date(d.getTime() - tz * 60000).toISOString().replace("Z", `${sign}${hh}:${mm}`);
-}
+/**
+ * Pull assignments from API and emit "assignments:loaded".
+ * @param {boolean} force - if true, shows the loading state even after first sync.
+ */
+export async function syncFromClassroom(force = false) {
+  const cardsEl   = document.getElementById("cards");
+  const loadingEl = document.getElementById("loading");
+  const emptyEl   = document.getElementById("empty");
 
-module.exports = async (req, res) => {
-  setCors(req, res);
-  if (req.method === "OPTIONS") return res.status(204).end();
-  if (req.method !== "GET") return res.status(405).json({ ok:false, error:"Method not allowed" });
-
-  // try to require here so module load never crashes
-  let googlePkg = null;
-  try { googlePkg = require("googleapis"); } catch { /* keep null */ }
-
-  const {
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
-    GOOGLE_REFRESH_TOKEN
-  } = process.env;
-
-  if (!googlePkg || !GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN) {
-    return res.status(200).json({ assignments: [], note: "Google not configured; returning empty list." });
+  // Show loading on first run or when explicitly forced
+  if (!firstSyncDone || force) {
+    loadingEl?.classList.remove("hidden");
+    emptyEl?.classList.add("hidden");
+    if (cardsEl && force) cardsEl.innerHTML = "";
   }
 
-  try {
-    const { google } = googlePkg;
-    const oAuth2Client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
-    oAuth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
-    const classroom = google.classroom({ version: "v1", auth: oAuth2Client });
+  // Endpoints: allow string or array in config, coerce to array
+  const endpointsRaw = CONFIG.classroomEndpoints ?? [];
+  const endpoints = Array.isArray(endpointsRaw) ? endpointsRaw : [endpointsRaw];
+  if (endpoints.length === 0) {
+    console.warn("CONFIG.classroomEndpoints is missing or empty.");
+    loadingEl?.classList.add("hidden");
+    emptyEl?.classList.remove("hidden");
+    return;
+  }
 
-    // 1) ACTIVE courses
-    let courses = [];
-    let pageTokenC;
-    do {
-      const r = await classroom.courses.list({ courseStates: ["ACTIVE"], pageToken: pageTokenC, pageSize: 100 });
-      courses = courses.concat(r.data.courses || []);
-      pageTokenC = r.data.nextPageToken;
-    } while (pageTokenC);
-
-    const assignments = [];
-
-    for (const c of courses) {
-      // 2) CourseWork (published only)
-      let works = [];
-      let pageTokenW;
-      do {
-        const r = await classroom.courses.courseWork.list({
-          courseId: c.id, pageToken: pageTokenW, pageSize: 100
-        });
-        const all = r.data.courseWork || [];
-        works = works.concat(all.filter(w => w.state === "PUBLISHED")); // ignore DRAFT/DELETED
-        pageTokenW = r.data.nextPageToken;
-      } while (pageTokenW);
-
-      // 3) Student submissions for the *current user* across all work in this course
-      //    (use courseWorkId "-" + userId="me" to batch list)
-      const subMap = new Map(); // courseWorkId -> StudentSubmission
-      let pageTokenS;
-      do {
-        const r = await classroom.courses.courseWork.studentSubmissions.list({
-          courseId: c.id,
-          courseWorkId: "-",
-          userId: "me",
-          pageToken: pageTokenS,
-          pageSize: 200
-        });
-        for (const s of (r.data.studentSubmissions || [])) {
-          subMap.set(String(s.courseWorkId), s);
-        }
-        pageTokenS = r.data.nextPageToken;
-      } while (pageTokenS);
-
-      // 4) Normalize
-      for (const w of works) {
-        // due date/time
-        let dueISO = null;
-        if (w.dueDate) {
-          const d = w.dueDate;
-          const t = w.dueTime || {};
-          const local = new Date(d.year, (d.month - 1), d.day, t.hours || 0, t.minutes || 0, 0, 0);
-          dueISO = toIsoWithOffset(local);
-        }
-        // submission state (if present)
-        const sub = subMap.get(String(w.id));
-        const submissionState = sub?.state || null; // NEW | CREATED | TURNED_IN | RETURNED | RECLAIMED_BY_STUDENT
-        const late = sub?.late === true;
-
-        assignments.push({
-          id: String(w.id),
-          courseId: String(c.id),
-          courseName: c.name || "",
-          title: w.title || "",
-          description: w.description || "",
-          dueDateISO: dueISO,
-          submissionState, // raw Classroom state for accuracy
-          late,
-          status: "UNKNOWN" // UI will compute LATE/TODAY/etc, but we keep raw submissionState too
-        });
-      }
+  // Try each endpoint until one succeeds
+  let payload = null;
+  let lastErr = null;
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      payload = await res.json();
+      break;
+    } catch (e) {
+      lastErr = e;
     }
-
-    return res.status(200).json({ assignments });
-  } catch (err) {
-    return res.status(200).json({ assignments: [], error: String(err && err.message || err) });
   }
-};
+
+  loadingEl?.classList.add("hidden");
+  firstSyncDone = true;
+
+  if (!payload) {
+    console.warn("Classroom sync failed:", lastErr);
+    emptyEl?.classList.remove("hidden");
+    if (cardsEl) cardsEl.innerHTML = "";
+    return;
+  }
+
+  // Accept either { assignments: [...] } or a raw array
+  const raw = Array.isArray(payload) ? payload : (payload.assignments || []);
+
+  // Local bypass overlay
+  const bypassMap = loadBypass();
+
+  // Normalize records for the UI
+  const list = (raw || []).map(a => {
+    const id = String(a.id ?? `${a.title}-${a.dueDateISO ?? ""}`);
+    return {
+      id,
+      title: a.title || "Untitled",
+      course: a.course || a.courseName || "",
+      dueDateISO: a.dueDateISO || null,
+      notes: a.description || a.notes || "",
+      // Classroom submission fields (if provided by API):
+      submissionState: a.submissionState || null, // NEW | CREATED | TURNED_IN | RETURNED | RECLAIMED_BY_STUDENT
+      late: !!a.late,                               // boolean flag from API (if present)
+      // Local-only UI status (bypass overlay)
+      status: bypassMap[id] ? "BYPASSED" : (a.status || "UNKNOWN")
+    };
+  });
+
+  // Fire notification pipeline (Telegram/Email) but never block rendering
+  try { await evaluateAndMaybeNotify(list); } catch (e) { console.warn("Notify failed:", e); }
+
+  // Let the UI render
+  document.dispatchEvent(new CustomEvent("assignments:loaded", { detail: list }));
+}
+
+// Auto-sync on load if enabled
+if (typeof window !== "undefined" && CONFIG.autoSyncOnLoad) {
+  window.addEventListener("load", () => {
+    setTimeout(() => { syncFromClassroom().catch(console.error); }, 80);
+  });
+}
+
+// Also wire the button here (safe if it's absent)
+document.getElementById("syncBtn")?.addEventListener("click", () => {
+  syncFromClassroom(true).catch(console.error);
+});
