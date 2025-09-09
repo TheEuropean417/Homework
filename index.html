@@ -113,6 +113,19 @@
             <label class="field"><span>Email Subject</span><input id="emailSubject" class="input" placeholder="Homework Reminder"></label>
           </div>
 
+          <div class="panel">
+            <h4>Send Test Email</h4>
+            <div class="grid-2">
+                <textarea id="emailTestBody" class="textarea" rows="3" placeholder="Test email body…">Test: Homework email notifications are configured and working.</textarea>
+                <div class="col gap">
+                <input id="emailTestSubject" class="input" placeholder="Subject (optional)" value="Homework — Test Notification">
+                <button id="sendTestEmail" class="btn primary">Send Test Email to All</button>
+                <div id="sendTestEmailStatus" class="small muted"></div>
+                </div>
+            </div>
+            </div>
+
+
           <div class="col gap" style="margin-top:8px">
             <textarea id="testMsg" class="textarea" rows="2" placeholder="Test message">Test: Notifications are working ✅</textarea>
             <div class="row">

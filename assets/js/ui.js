@@ -1,377 +1,431 @@
+// assets/js/ui.js — complete replacement
+
+// ------------------------ Imports ------------------------
 import { CONFIG } from "./config.js";
 import { syncFromClassroom } from "./classroom.js";
 import {
-  loadBypass, saveBypass,
   loadRecipients, saveRecipients,
-  loadTemplates, saveTemplates,
-  loadNotifySettings, saveNotifySettings,
-  loadLocalDone, saveLocalDone,  // kept for future; not used as UI state
-  loadTelegram, saveTelegram, loadEmail, saveEmail
+  loadTemplates,  saveTemplates,
+  loadSmsSettings, saveSmsSettings,
+  loadBypass,     saveBypass
 } from "./state.js";
+import { sendEmailsToConfiguredRecipients } from "./email.js";
 
-/* ---------- tiny toast for messages ---------- */
-function showToast(msg){
-  let t = document.querySelector(".toast");
-  if(!t){
-    t = document.createElement("div");
-    t.className = "toast";
-    t.innerHTML = `<span class="tmsg"></span>`;
-    document.body.appendChild(t);
-  }
-  t.querySelector(".tmsg").textContent = msg;
+// ------------------------ DOM helpers ------------------------
+const el  = (s, r=document) => r.querySelector(s);
+const els = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+// ------------------------ Toast ------------------------
+export function toast(msg) {
+  const t = el("#toast");
+  const m = el("#toastMsg");
+  if (!t || !m) return;
+  m.textContent = msg;
   t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"), 2600);
+  setTimeout(() => t.classList.remove("show"), 1800);
 }
 
-/* ---------- DOM ---------- */
-const el = s => document.querySelector(s);
-const cards = el("#cards");
-const empty = el("#empty");
-let assignments = [];
+// ------------------------ Global-ish view state ------------------------
+const cards   = el("#cards");
+const loading = el("#loading");
+const empty   = el("#empty");
 
-/* ---------- mapping ---------- */
-function submissionLabel(a){
-  switch (a.submissionState) {
-    case "TURNED_IN": return "SUBMITTED";
-    case "RETURNED": return "RETURNED";
-    case "RECLAIMED_BY_STUDENT": return "UNSUBMITTED";
-    default: return null;
-  }
-}
-function urgencyCat(a){
-  if(a.status === "BYPASSED") return "BYPASSED";
-  const now = new Date();
-  const due = a.dueDateISO ? new Date(a.dueDateISO) : null;
-  const isLate = a.late === true || (!!due && due < now && a.submissionState !== "TURNED_IN");
-  if(isLate) return "LATE";
-  if(!due) return "UPCOMING";
-  const sameDay = (x,y)=>x.getFullYear()===y.getFullYear() && x.getMonth()===y.getMonth() && x.getDate()===y.getDate();
-  const tomorrow = new Date(now); tomorrow.setDate(now.getDate()+1);
-  if (sameDay(due, now)) return "TODAY";
-  if (sameDay(due, tomorrow)) return "TOMORROW";
-  return "UPCOMING";
-}
-const badgeClass = (cat, sub) => {
-  if (sub === "SUBMITTED") return "sub";
-  if (sub === "RETURNED") return "ret";
-  return ({LATE:"late",TODAY:"today",TOMORROW:"tomorrow",UPCOMING:"up",BYPASSED:"byp"}[cat] || "up");
-};
-const dotClass = (cat, sub) => {
-  if (sub === "SUBMITTED") return "sub";
-  if (sub === "RETURNED") return "ret";
-  return ({LATE:"late",TODAY:"today",TOMORROW:"tomorrow",UPCOMING:"up",BYPASSED:"byp"}[cat] || "up");
-};
-const labelText  = (cat, sub) => sub || ({LATE:"LATE",TODAY:"TODAY",TOMORROW:"TOMORROW",UPCOMING:"UPCOMING",BYPASSED:"BYPASSED"}[cat]||cat);
-function fmtDate(iso){ return iso ? new Date(iso).toLocaleString() : "—"; }
+let assignments = []; // normalized objects: {id,title,course,notes,status,dueDateISO}
 
-/* ---------- counters ---------- */
-function recomputeSummary(list){
-  let kLate=0,kToday=0,kTom=0,kUp=0,kSub=0,kRet=0;
-  for (const a of list) {
-    const sub = submissionLabel(a);
-    if (sub === "SUBMITTED") kSub++;
-    if (sub === "RETURNED")  kRet++;
-    switch (urgencyCat(a)){
-      case "LATE": kLate++; break;
-      case "TODAY": kToday++; break;
-      case "TOMORROW": kTom++; break;
-      case "UPCOMING": kUp++; break;
-    }
-  }
-  const set = (id, v) => { const n = el(id); if (n) n.textContent = String(v); };
-  set("#kLate", kLate); set("#kToday", kToday); set("#kTom", kTom); set("#kUp", kUp); set("#kSub", kSub); set("#kRet", kRet);
+// ------------------------ Utilities ------------------------
+function fmtDate(iso){ try{ return iso ? new Date(iso).toLocaleString() : "—"; }catch{ return "—"; } }
+
+function statusClass(s){
+  if(s==="LATE") return "late";
+  if(s==="DONE"||s==="COMPLETED") return "done";
+  if(s==="BYPASSED") return "byp";
+  if(s==="DUE_TODAY") return "today";
+  if(s==="DUE_TOMORROW") return "tomorrow";
+  return "up";
 }
 
-/* ---------- filters ---------- */
-const keyToCheckbox = {
-  Late: "#fLate", Today:"#fToday", Tomorrow:"#fTomorrow", Upcoming:"#fUpcoming",
-  Submitted:"#fSubmitted", Returned:"#fReturned"
-};
-function passFilters(a){
-  const map = {
-    LATE: el("#fLate")?.checked,
-    TODAY: el("#fToday")?.checked,
-    TOMORROW: el("#fTomorrow")?.checked,
-    UPCOMING: el("#fUpcoming")?.checked,
-    BYPASSED: el("#fBypassed")?.checked,
-    SUBMITTED: el("#fSubmitted")?.checked,
-    RETURNED: el("#fReturned")?.checked
-  };
-  const sub = submissionLabel(a);
-  if (sub === "SUBMITTED" && !map.SUBMITTED) return false;
-  if (sub === "RETURNED"  && !map.RETURNED)  return false;
-  if (!map[urgencyCat(a)]) return false;
-
-  const q = (el("#searchInput")?.value || "").trim().toLowerCase();
+function matchesSearch(a, q){
   if(!q) return true;
+  q = q.toLowerCase();
   return (a.title?.toLowerCase().includes(q) ||
           a.course?.toLowerCase().includes(q) ||
           a.notes?.toLowerCase().includes(q) ||
-          (a.submissionState||"").toLowerCase().includes(q));
-}
-function syncCountersFromFilters(){
-  for (const [k,sel] of Object.entries(keyToCheckbox)){
-    const cb = el(sel); const tile = document.querySelector(`.stat.toggle[data-key="${k}"]`);
-    if (cb && tile) tile.classList.toggle("off", !cb.checked);
-  }
+          a.status?.toLowerCase().includes(q));
 }
 
-/* ---------- render ---------- */
-function render(){
+function shouldShow(a){
+  const q       = el("#searchInput")?.value.trim();
+  const showLate= el("#toggleLate")?.checked ?? true;
+  const showDue = el("#toggleDueSoon")?.checked ?? true;
+  const showDone= el("#toggleCompleted")?.checked ?? false;
+  const showByp = el("#toggleBypassed")?.checked ?? false;
+
+  // quick search filter
+  if(!matchesSearch(a,q)) return false;
+
+  // BYPASSED visibility
+  if(a.status==="BYPASSED" && !q && !showByp) return false;
+
+  // group-based visibility
+  if(a.status==="LATE")                       return showLate;
+  if(a.status==="DONE" || a.status==="COMPLETED") return showDone;
+
+  // treat everything else as active/due
+  return showDue;
+}
+
+// ------------------------ Rendering ------------------------
+function render() {
+  if (!cards) return;
   cards.innerHTML = "";
   let shown = 0;
 
-  // strict by due date
-  const t = a => a?.dueDateISO ? new Date(a.dueDateISO).getTime() : Number.POSITIVE_INFINITY;
-  const sorted = [...assignments].sort((a,b)=> t(a)-t(b));
+  const bypassMap = loadBypass() || {};
 
-  for (const a of sorted) {
-    if (!passFilters(a)) continue;
+  for(const a of assignments){
+    if(!shouldShow(a)) continue;
     shown++;
 
-    const cat = urgencyCat(a);
-    const sub = submissionLabel(a);
+    const c = document.createElement("div");
+    c.className = "card";
 
-    const card = document.createElement("div");
-    card.className = "card";
-
+    // Head
     const head = document.createElement("div");
     head.className = "card-head";
     head.innerHTML = `
-      <div class="title"><span class="dot ${dotClass(cat, sub)}"></span>${a.title}</div>
-      <div class="badges"><span class="badge ${badgeClass(cat, sub)}">${labelText(cat, sub)}</span></div>`;
-    card.appendChild(head);
+      <div class="title">
+        <span class="dot ${statusClass(a.status)}"></span>
+        ${a.title || "Untitled"}
+      </div>
+      <div class="badges">
+        <span class="badge ${statusClass(a.status)}">${a.status?.replace("_"," ") || "UNKNOWN"}</span>
+      </div>`;
+    c.appendChild(head);
 
+    // Meta
     const meta = document.createElement("div");
     meta.className = "meta";
     meta.innerText = `${a.course || "—"} · Due: ${fmtDate(a.dueDateISO)}`;
-    card.appendChild(meta);
+    c.appendChild(meta);
 
+    // Notes
     if(a.notes){
       const notes = document.createElement("div");
       notes.className = "small";
       notes.innerText = a.notes;
-      card.appendChild(notes);
+      c.appendChild(notes);
     }
 
+    // Footer actions
     const foot = document.createElement("div");
     foot.className = "card-foot";
 
     const left = document.createElement("div");
-    left.className = "small muted";
-    left.innerText = a.dueDateISO ? "" : "No due date";
+    left.className = "muted small";
+    left.textContent = bypassMap[a.id] ? "Bypassed" : "";
     foot.appendChild(left);
 
     const right = document.createElement("div");
     right.className = "card-actions";
 
-    // READ-ONLY: Only Bypass
-    const bypBtn = document.createElement("button");
-    bypBtn.className = "btn";
-    bypBtn.textContent = a.status === "BYPASSED" ? "Un-bypass" : "Bypass";
-    bypBtn.addEventListener("click", ()=>onBypass(a));
-    right.appendChild(bypBtn);
+    const btnByp = document.createElement("button");
+    btnByp.className = "btn";
+    btnByp.textContent = bypassMap[a.id] ? "Unbypass" : "Bypass";
+    btnByp.addEventListener("click", () => {
+      const map = loadBypass() || {};
+      if (map[a.id]) delete map[a.id];
+      else map[a.id] = true;
+      saveBypass(map);
+      render();
+      toast(map[a.id] ? "Bypassed" : "Unbypassed");
+    });
+    right.appendChild(btnByp);
 
     foot.appendChild(right);
-    card.appendChild(foot);
+    c.appendChild(foot);
 
-    cards.appendChild(card);
+    cards.appendChild(c);
   }
 
-  empty?.classList.toggle("hidden", shown>0);
-  recomputeSummary(assignments);
-  syncCountersFromFilters();
+  if (empty) empty.style.display = shown ? "none" : "block";
 }
 
-/* ---------- actions ---------- */
-function onBypass(a){
-  const pwd = prompt("Admin password to toggle bypass:");
-  if(pwd !== CONFIG.adminPassword){ alert("Incorrect password."); return; }
-  const map = loadBypass();
-  if (map[a.id]) { delete map[a.id]; a.status="UNKNOWN"; showToast("Un-bypassed."); }
-  else { map[a.id]=true; a.status="BYPASSED"; showToast("Bypassed."); }
-  saveBypass(map);
-  render();
-}
-
-/* ---------- listeners ---------- */
-["#searchInput","#fLate","#fToday","#fTomorrow","#fUpcoming","#fBypassed","#fSubmitted","#fReturned"].forEach(sel=>{
-  el(sel)?.addEventListener(sel==="#searchInput"?"input":"change", ()=>{ syncCountersFromFilters(); render(); });
-});
-
-// Clickable counters toggle their matching filters
-document.querySelectorAll(".stat.toggle").forEach(tile=>{
-  tile.addEventListener("click", ()=>{
-    const key = tile.getAttribute("data-key"); const cbSel = keyToCheckbox[key];
-    const cb = cbSel ? el(cbSel) : null;
-    if (cb){ cb.checked = !cb.checked; }
-    syncCountersFromFilters(); render();
+// ------------------------ Filters & controls ------------------------
+function wireFilters(){
+  el("#searchInput")?.addEventListener("input", () => render());
+  ["#toggleLate","#toggleDueSoon","#toggleCompleted","#toggleBypassed"].forEach(s=>{
+    el(s)?.addEventListener("change", () => render());
   });
-});
+}
 
-document.addEventListener("assignments:loaded", e=>{
-  const list = e.detail || [];
-  const bypass = loadBypass();
-  assignments = list.map(a => ({ ...a, status: bypass[a.id] ? "BYPASSED" : a.status, late: !!a.late }));
-  render();
-});
+// ------------------------ Sync button ------------------------
+function wireSync(){
+  const btn = el("#syncBtn");
+  if(!btn) return;
+  btn.addEventListener("click", async ()=>{
+    try{
+      loading && (loading.style.display = "block");
+      btn.disabled = true;
+      const res = await syncFromClassroom(); // your module populates data / local storage
+      // Option A: If syncFromClassroom returns normalized items, use them
+      if (Array.isArray(res?.assignments)) {
+        assignments = res.assignments;
+      } else {
+        // Option B: fall back to what classroom.js places in state; caller can expose accessors if needed
+        // For safety we just leave assignments as-is unless set elsewhere
+      }
+      render();
+      toast("Classroom sync complete");
+    }catch(e){
+      console.error(e);
+      toast("Sync failed");
+      alert(String(e?.message||e));
+    }finally{
+      btn.disabled = false;
+      loading && (loading.style.display = "none");
+    }
+  });
+}
 
-/* ---------- Admin (unchanged core + Bypass Manager additions) ---------- */
-const adminModal = el("#adminModal");
-el("#adminBtn").addEventListener("click", ()=>adminModal.showModal());
-el("#adminClose").addEventListener("click", ()=>adminModal.close());
-el("#adminUnlock").addEventListener("click", ()=>{
-  const pwd = el("#adminPassword").value.trim();
-  if(pwd !== CONFIG.adminPassword){
-    const err = el("#adminErr"); err.textContent = "Wrong password"; err.classList.remove("hidden");
+// ------------------------ Admin Modal (gate + UI) ------------------------
+function wireAdminModal(){
+  const modal = el("#adminModal");
+  if(!modal) return;
+
+  const openBtn   = el("#adminBtn");
+  const closeBtn  = el("#adminClose");
+  const unlockBtn = el("#adminUnlock");
+
+  openBtn?.addEventListener("click", ()=> modal.showModal());
+  closeBtn?.addEventListener("click", ()=> modal.close());
+
+  // Eye toggle on password
+  el("#adminPwToggle")?.addEventListener("click", (e) => {
+    const inp = el("#adminPassword");
+    if(!inp) return;
+    const isPass = inp.type === "password";
+    inp.type = isPass ? "text" : "password";
+    e.currentTarget.setAttribute("aria-label", isPass ? "Hide password" : "Show password");
+  });
+
+  unlockBtn?.addEventListener("click", () => {
+    const pwd = el("#adminPassword")?.value?.trim();
+    if(pwd !== CONFIG.adminPassword){
+      const err = el("#adminErr");
+      if (err){ err.textContent = "Wrong password"; err.classList.remove("hidden"); }
+      return;
+    }
+    el("#adminErr")?.classList.add("hidden");
+    el("#adminGate")?.classList.add("hidden");
+    el("#adminBody")?.classList.remove("hidden");
+    loadAdminUI(); // populate panels once unlocked
+    buildBypassList();
+  });
+}
+
+// ------------------------ Admin: Recipients panel ------------------------
+function buildRecipientsPanel(){
+  const tbody = el("#recipientsBody");
+  if(!tbody) return;
+
+  const data = loadRecipients() || [];
+  tbody.innerHTML = "";
+
+  for(const r of data){
+    const row = document.createElement("div");
+    row.className = "table-row";
+    row.innerHTML = `
+      <div>${r.name || "—"}</div>
+      <div>${r.email || "—"}</div>
+      <div>${r.telegram_chat_id || "—"}</div>
+      <div class="right">
+        <button class="acc-chip acc-danger btn remove">Remove</button>
+      </div>
+    `;
+    row.querySelector(".remove")?.addEventListener("click", ()=>{
+      const next = (loadRecipients() || []).filter(x => !(x.name===r.name && x.email===r.email && x.telegram_chat_id===r.telegram_chat_id));
+      saveRecipients(next);
+      buildRecipientsPanel();
+      toast("Recipient removed");
+    });
+    tbody.appendChild(row);
+  }
+
+  // Add form
+  el("#recipientAddBtn")?.addEventListener("click", ()=>{
+    const name  = el("#recName")?.value?.trim();
+    const email = el("#recEmail")?.value?.trim();
+    const tg    = el("#recTg")?.value?.trim();
+    if(!name && !email && !tg) { alert("Enter at least a name and an email or telegram chat_id."); return; }
+    const items = loadRecipients() || [];
+    items.push({ name, email, telegram_chat_id: tg });
+    saveRecipients(items);
+    el("#recName").value = ""; el("#recEmail").value = ""; el("#recTg").value = "";
+    buildRecipientsPanel();
+    toast("Recipient added");
+  });
+}
+
+// ------------------------ Admin: Templates panel ------------------------
+function buildTemplatesPanel(){
+  const keyInput   = el("#tplKey");
+  const subjInput  = el("#tplSubj");
+  const bodyInput  = el("#tplBody");
+  const saveBtn    = el("#tplSave");
+  const removeBtn  = el("#tplRemove");
+
+  if(!keyInput || !bodyInput || !saveBtn) return;
+
+  const templates = loadTemplates() || {};
+
+  function loadCurrent(){
+    const k = keyInput.value.trim();
+    const t = templates[k] || {};
+    subjInput.value = t.subject || "";
+    bodyInput.value = t.body || "";
+  }
+
+  keyInput.addEventListener("input", loadCurrent);
+
+  saveBtn.addEventListener("click", ()=>{
+    const k = keyInput.value.trim();
+    if(!k) { alert("Template key is required"); return; }
+    templates[k] = { subject: subjInput.value, body: bodyInput.value };
+    saveTemplates(templates);
+    toast("Template saved");
+  });
+
+  removeBtn?.addEventListener("click", ()=>{
+    const k = keyInput.value.trim();
+    if(!k) return;
+    delete templates[k];
+    saveTemplates(templates);
+    subjInput.value = ""; bodyInput.value = "";
+    toast("Template removed");
+  });
+
+  // initialize
+  loadCurrent();
+}
+
+// ------------------------ Admin: Notification rules panel (SMS) ------------------------
+function buildRulesPanel(){
+  const s = loadSmsSettings();
+  const qh   = el("#ruleQuietHours");
+  const soon = el("#ruleDueSoonHours");
+  const late = el("#ruleNotifyLate");
+  const dsum = el("#ruleDailyTime");
+  const save = el("#rulesSave");
+  const reset= el("#rulesReset");
+
+  if(qh)   qh.value   = s.quiet || "21:00-07:00";
+  if(soon) soon.value = String(s.dueSoonHours ?? 24);
+  if(late) late.checked = !!s.onLate;
+  if(dsum) dsum.value = s.summaryTime || "19:30";
+
+  save?.addEventListener("click", ()=>{
+    const next = {
+      enabled: true,
+      quiet: (qh?.value || "21:00-07:00").trim(),
+      dueSoonHours: Number(soon?.value || 24),
+      onLate: !!(late?.checked),
+      summaryTime: (dsum?.value || "19:30").trim(),
+      alertTemplate: s.alertTemplate || "due_soon"
+    };
+    saveSmsSettings(next);
+    toast("Rules saved");
+  });
+
+  reset?.addEventListener("click", ()=>{
+    saveSmsSettings({
+      enabled:false, quiet:"21:00-07:00", dueSoonHours:24, onLate:true, summaryTime:"19:30", alertTemplate:"due_soon"
+    });
+    buildRulesPanel();
+    toast("Rules reset");
+  });
+}
+
+// ------------------------ Admin: Bypass viewer ------------------------
+function buildBypassList(){
+  const list = el("#bypassList");
+  if(!list) return;
+  const map = loadBypass() || {};
+  list.innerHTML = "";
+
+  const ids = Object.keys(map);
+  if(!ids.length){
+    const d = document.createElement("div");
+    d.className = "muted small";
+    d.textContent = "Nothing is bypassed.";
+    list.appendChild(d);
     return;
   }
-  el("#adminErr").classList.add("hidden");
-  el("#adminGate").classList.add("hidden");
-  el("#adminBody").classList.remove("hidden");
-  loadAdminUI();
-  buildBypassList(); // populate Bypass Manager
-});
 
-// password show/hide
-el("#adminPwToggle")?.addEventListener("click", (e) => {
-  const inp = el("#adminPassword");
-  const isPass = inp.type === "password";
-  inp.type = isPass ? "text" : "password";
-  e.currentTarget.setAttribute("aria-label", isPass ? "Hide password" : "Show password");
-});
-
-function loadAdminUI(){
-  // Recipients
-  const recs = loadRecipients();
-  const list = el("#recipientsList");
-  if (list){
-    list.innerHTML = "";
-    for(const r of recs){
-      const row = document.createElement("div");
-      row.className = "item";
-      row.innerHTML = `<div>${r.name} <span class="muted small">${r.email||"—"} ${r.chatId?("· TG:"+r.chatId):""}</span></div>`;
-      const del = document.createElement("button"); del.className="btn"; del.textContent="Remove";
-      del.addEventListener("click", ()=>{ const upd = loadRecipients().filter(x=>x.id!==r.id); saveRecipients(upd); loadAdminUI(); });
-      row.appendChild(del);
-      list.appendChild(row);
-    }
-  }
-
-  // Templates
-  const tmpls = loadTemplates(); const tlist = el("#templatesList");
-  if (tlist){
-    tlist.innerHTML = "";
-    Object.entries(tmpls).forEach(([name,body])=>{
-      const row = document.createElement("div"); row.className="item";
-      row.innerHTML = `<div><b>${name}</b><div class="small muted">${body}</div></div>`;
-      const del=document.createElement("button"); del.className="btn"; del.textContent="Remove";
-      del.addEventListener("click", ()=>{ const m=loadTemplates(); delete m[name]; saveTemplates(m); loadAdminUI(); });
-      row.appendChild(del); tlist.appendChild(row);
+  for(const id of ids){
+    const row = document.createElement("div");
+    row.className = "item";
+    row.innerHTML = `<div>Assignment ${id}</div><div><button class="btn">Unbypass</button></div>`;
+    row.querySelector("button")?.addEventListener("click", ()=>{
+      const m = loadBypass() || {};
+      delete m[id]; saveBypass(m);
+      buildBypassList(); render();
     });
+    list.appendChild(row);
   }
-
-  // Rules
-  const ns = loadNotifySettings();
-  if (el("#quiet")) el("#quiet").value = ns.quiet||"";
-  if (el("#dueSoonHrs")) el("#dueSoonHrs").value = ns.dueSoonHours??24;
-  if (el("#onLate")) el("#onLate").checked = !!ns.onLate;
-  if (el("#summaryTime")) el("#summaryTime").value = ns.summaryTime||"";
-  if (el("#alertTemplate")) el("#alertTemplate").value = ns.alertTemplate||"";
-
-  // Channels
-  const tg = loadTelegram();
-  if (el("#tgEnable")) el("#tgEnable").checked = !!tg.enabled;
-  if (el("#tgToken")) el("#tgToken").value = tg.botToken || "";
-  if (el("#tgChatIds")) el("#tgChatIds").value = tg.chatIds || "";
-
-  const em = loadEmail();
-  if (el("#emailEnable")) el("#emailEnable").checked = !!em.enabled;
-  if (el("#emailSubject")) el("#emailSubject").value = em.subject || "Homework Reminder";
 }
 
-el("#addRecipient")?.addEventListener("click", ()=>{
-  const name = el("#recName")?.value.trim();
-  const email = el("#recEmail")?.value.trim();
-  const chatId = el("#recChatId")?.value.trim();
-  if(!name || (!email && !chatId)) return;
-  const recs = loadRecipients(); recs.push({ id: `${Date.now()}-${Math.random()}`, name, email, chatId });
-  saveRecipients(recs);
-  el("#recName").value=""; el("#recEmail").value=""; el("#recChatId").value="";
-  loadAdminUI();
-});
-el("#addTemplate")?.addEventListener("click", ()=>{
-  const name = el("#tmplName")?.value.trim();
-  const body = el("#tmplBody")?.value.trim();
-  if(!name || !body) return;
-  const t = loadTemplates(); t[name] = body; saveTemplates(t);
-  el("#tmplName").value=""; el("#tmplBody").value="";
-  loadAdminUI();
-});
-el("#saveAdmin")?.addEventListener("click", ()=>{
-  const ns = {
-    quiet: (el("#quiet")?.value||"").trim(),
-    dueSoonHours: Number(el("#dueSoonHrs")?.value)||24,
-    onLate: !!el("#onLate")?.checked,
-    summaryTime: (el("#summaryTime")?.value||"").trim(),
-    alertTemplate: (el("#alertTemplate")?.value||"due_soon").trim()
-  };
-  saveNotifySettings(ns);
-  const tg = {
-    enabled: !!el("#tgEnable")?.checked,
-    botToken: (el("#tgToken")?.value||"").trim(),
-    chatIds: (el("#tgChatIds")?.value||"").trim()
-  };
-  saveTelegram(tg);
-  const em = {
-    enabled: !!el("#emailEnable")?.checked,
-    subject: (el("#emailSubject")?.value||"Homework Reminder").trim()
-  };
-  saveEmail(em);
-  alert("Saved.");
-});
+// ------------------------ Admin: Email test wiring ------------------------
+function wireEmailTest(){
+  const emailBtn    = el("#sendTestEmail");
+  const emailBody   = el("#emailTestBody");
+  const emailSubject= el("#emailTestSubject");
+  const emailStatus = el("#sendTestEmailStatus");
 
-/* ---- Bypass Manager ---- */
-function buildBypassList(){
-  const listEl = el("#bypassList"); if(!listEl) return;
-  const map = loadBypass();
-  const ids = Object.keys(map);
-  listEl.innerHTML = "";
-  if (!ids.length){ listEl.innerHTML = `<div class="small muted">No bypassed items.</div>`; return; }
+  if(!emailBtn) return;
 
-  const lookup = new Map(assignments.map(a=>[a.id,a]));
-  ids.forEach(id=>{
-    const a = lookup.get(id);
-    const row = document.createElement("div"); row.className="item";
-    const label = a ? `${a.title} — ${a.course||"—"} · Due: ${fmtDate(a.dueDateISO)}` : `Assignment ${id}`;
-    row.innerHTML = `<div>${label}</div>`;
-    const btn = document.createElement("button"); btn.className="btn"; btn.textContent="Un-bypass";
-    btn.addEventListener("click", ()=>{
-      const m = loadBypass(); delete m[id]; saveBypass(m); buildBypassList(); // update list
-      // also update current UI if that assignment is present
-      const found = assignments.find(x=>x.id===id); if(found){ found.status="UNKNOWN"; render(); }
-      showToast("Un-bypassed.");
-    });
-    row.appendChild(btn); listEl.appendChild(row);
+  emailBtn.addEventListener("click", async ()=>{
+    if(!CONFIG.emailEndpoint && !CONFIG.classroomEndpoints?.length){
+      alert("Email endpoint is not configured."); return;
+    }
+    const pwd = prompt("Admin password to send test email:");
+    if(pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+
+    emailBtn.disabled = true; if(emailStatus) emailStatus.textContent = "Sending…";
+    try{
+      const subject = (emailSubject?.value || "Homework — Test").trim();
+      const text    = (emailBody?.value || "Test email from Homework").trim();
+      const rsp     = await sendEmailsToConfiguredRecipients({ subject, text });
+      if(emailStatus) emailStatus.textContent = `Sent ${rsp?.sent ?? 0} email(s)`;
+      toast("Email sent");
+    }catch(e){
+      console.error(e);
+      if(emailStatus) emailStatus.textContent = "Failed to send test";
+      alert(String(e?.message||e));
+    }finally{
+      emailBtn.disabled = false;
+      setTimeout(()=>{ if(emailStatus) emailStatus.textContent = ""; }, 4000);
+    }
   });
 }
-el("#refreshBypass")?.addEventListener("click", buildBypassList);
-el("#unbypassAll")?.addEventListener("click", ()=>{
-  const m = loadBypass(); if(!Object.keys(m).length) return;
-  if (!confirm("Remove bypass from all items?")) return;
-  saveBypass({}); buildBypassList();
-  // update any visible assignment state
-  assignments = assignments.map(a => ({...a, status:"UNKNOWN"})); render();
-  showToast("All un-bypassed.");
-});
 
-/* search */
-el("#searchInput")?.addEventListener("input", ()=>{ render(); });
+// ------------------------ Admin UI boot ------------------------
+function loadAdminUI(){
+  buildRecipientsPanel();
+  buildTemplatesPanel();
+  buildRulesPanel();
+  wireEmailTest();
+}
 
-/* sync button */
-document.getElementById("syncBtn")?.addEventListener("click", () => {
-  syncFromClassroom(true).catch(console.error);
-});
+// ------------------------ Boot ------------------------
+function boot(){
+  wireFilters();
+  wireSync();
+  wireAdminModal();
 
-/* initial paint */
-render();
+  // Auto-sync if configured
+  if (CONFIG.autoSyncOnLoad) {
+    el("#syncBtn")?.click();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", boot);
