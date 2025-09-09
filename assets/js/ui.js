@@ -1,12 +1,5 @@
 import { CONFIG } from "./config.js";
-
-// Ensure the Sync button triggers the fetch (and forces a visible run)
 import { syncFromClassroom } from "./classroom.js";
-
-document.getElementById("syncBtn")?.addEventListener("click", () => {
-  syncFromClassroom(true).catch(console.error);
-});
-
 import {
   loadBypass, saveBypass,
   loadRecipients, saveRecipients,
@@ -16,13 +9,35 @@ import {
   loadTelegram, saveTelegram, loadEmail, saveEmail
 } from "./state.js";
 
+/* ---------- small toast for Undo etc. ---------- */
+function showToast(msg, undoCb){
+  let t = document.querySelector(".toast");
+  if(!t){
+    t = document.createElement("div");
+    t.className = "toast";
+    t.innerHTML = `<span class="tmsg"></span><span class="undo"></span>`;
+    document.body.appendChild(t);
+  }
+  t.querySelector(".tmsg").textContent = msg;
+  const u = t.querySelector(".undo");
+  if (undoCb){
+    u.textContent = "Undo";
+    u.onclick = ()=>{ t.classList.remove("show"); undoCb(); };
+    u.style.display = "inline";
+  } else {
+    u.style.display = "none";
+  }
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 4500);
+}
+
+/* ---------- DOM refs ---------- */
 const el = sel => document.querySelector(sel);
 const cards = el("#cards");
 const empty = el("#empty");
-
 let assignments = [];
 
-// ---- categorization for strong visuals ----
+/* ---------- status logic ---------- */
 function catOf(a){
   if(a.status === "BYPASSED") return "BYPASSED";
   if(a.status === "COMPLETED" || a.status === "DONE") return "DONE";
@@ -36,9 +51,10 @@ function catOf(a){
   if (sameDay(due, tomorrow)) return "TOMORROW";
   return "UPCOMING";
 }
-function badgeClass(cat){
-  return { LATE:"late", TODAY:"due", TOMORROW:"due", UPCOMING:"due", DONE:"done", BYPASSED:"byp" }[cat] || "due";
-}
+const badgeClass = cat => ({LATE:"late",TODAY:"today",TOMORROW:"tomorrow",UPCOMING:"up",DONE:"done",BYPASSED:"byp"}[cat] || "up");
+const dotClass   = cat => ({LATE:"late",TODAY:"today",TOMORROW:"tomorrow",UPCOMING:"up",DONE:"done",BYPASSED:"byp"}[cat] || "up");
+const labelText  = cat => ({LATE:"LATE",TODAY:"TODAY",TOMORROW:"TOMORROW",UPCOMING:"UPCOMING",DONE:"DONE",BYPASSED:"BYPASSED"}[cat]||cat);
+
 function fmtDate(iso){ return iso ? new Date(iso).toLocaleString() : "—"; }
 
 function recomputeSummary(list){
@@ -52,17 +68,16 @@ function recomputeSummary(list){
 }
 
 function passFilters(a){
-  const cat = catOf(a);
-  const on = {
-    LATE: el("#fLate").checked,
-    TODAY: el("#fToday").checked,
-    TOMORROW: el("#fTomorrow").checked,
-    UPCOMING: el("#fUpcoming").checked,
-    DONE: el("#fDone").checked,
-    BYPASSED: el("#fBypassed").checked
-  }[cat];
-  if (!on) return false;
-  const q = el("#searchInput").value.trim().toLowerCase();
+  const map = {
+    LATE: el("#fLate")?.checked,
+    TODAY: el("#fToday")?.checked,
+    TOMORROW: el("#fTomorrow")?.checked,
+    UPCOMING: el("#fUpcoming")?.checked,
+    DONE: el("#fDone")?.checked,
+    BYPASSED: el("#fBypassed")?.checked
+  };
+  if(!map[catOf(a)]) return false;
+  const q = (el("#searchInput")?.value || "").trim().toLowerCase();
   if(!q) return true;
   return (a.title?.toLowerCase().includes(q) ||
           a.course?.toLowerCase().includes(q) ||
@@ -70,18 +85,14 @@ function passFilters(a){
           (a.status||"").toLowerCase().includes(q));
 }
 
+/* ---------- render ---------- */
 function render(){
   cards.innerHTML = "";
   let shown = 0;
 
-  const order = {LATE:0,TODAY:1,TOMORROW:2,UPCOMING:3,DONE:4,BYPASSED:5};
-  const sorted = [...assignments].sort((a,b)=>{
-    const ca = catOf(a), cb = catOf(b);
-    if (order[ca] !== order[cb]) return order[ca]-order[cb];
-    const da = a.dueDateISO ? new Date(a.dueDateISO).getTime() : Infinity;
-    const db = b.dueDateISO ? new Date(b.dueDateISO).getTime() : Infinity;
-    return da - db;
-  });
+  // ORDER: by due date ascending (no-date = bottom)
+  const t = (x)=> x?.dueDateISO ? new Date(x.dueDateISO).getTime() : Number.POSITIVE_INFINITY;
+  const sorted = [...assignments].sort((a,b)=> t(a)-t(b));
 
   for(const a of sorted){
     if(!passFilters(a)) continue;
@@ -95,8 +106,8 @@ function render(){
     const head = document.createElement("div");
     head.className = "card-head";
     head.innerHTML = `
-      <div class="title">${a.title}</div>
-      <div class="badges"><span class="badge ${badgeClass(cat)}">${cat.replace("_"," ")}</span></div>`;
+      <div class="title"><span class="dot ${dotClass(cat)}"></span>${a.title}</div>
+      <div class="badges"><span class="badge ${badgeClass(cat)}">${labelText(cat)}</span></div>`;
     c.appendChild(head);
 
     const meta = document.createElement("div");
@@ -124,8 +135,9 @@ function render(){
 
     const doneBtn = document.createElement("button");
     doneBtn.className = "btn";
-    doneBtn.textContent = (cat==="DONE") ? "Mark Not Done" : "Mark Done";
-    doneBtn.addEventListener("click", ()=>onToggleDone(a));
+    const wasDone = (cat==="DONE");
+    doneBtn.textContent = wasDone ? "Reopen" : "Mark Done";
+    doneBtn.addEventListener("click", ()=>onToggleDone(a, wasDone));
     right.appendChild(doneBtn);
 
     const bypassBtn = document.createElement("button");
@@ -140,32 +152,44 @@ function render(){
     cards.appendChild(c);
   }
 
-  empty.classList.toggle("hidden", shown>0);
+  empty?.classList.toggle("hidden", shown>0);
   recomputeSummary(assignments);
 }
 
-async function onToggleDone(a){
+/* ---------- actions ---------- */
+function onToggleDone(a, wasDone){
   const map = loadLocalDone();
-  if (map[a.id]) { delete map[a.id]; a.status = "UNKNOWN"; }
-  else { map[a.id] = true; a.status = "COMPLETED"; }
-  saveLocalDone(map); render();
-}
-async function onBypass(a){
-  const pwd = prompt("Admin password to bypass:");
-  if(pwd !== CONFIG.adminPassword){ alert("Incorrect password."); return; }
-  const map = loadBypass();
-  if(map[a.id]) delete map[a.id]; else map[a.id] = true;
-  saveBypass(map);
-  a.status = map[a.id] ? "BYPASSED" : "UNKNOWN";
+  const prev = !!map[a.id];
+
+  if (prev || wasDone){ // reopen
+    delete map[a.id];
+    a.status = "UNKNOWN";
+    saveLocalDone(map);
+    showToast("Reopened assignment.", ()=>{ map[a.id]=true; a.status="COMPLETED"; saveLocalDone(map); render(); });
+  } else {               // mark done
+    map[a.id] = true;
+    a.status = "COMPLETED";
+    saveLocalDone(map);
+    showToast("Marked as done.", ()=>{ delete map[a.id]; a.status="UNKNOWN"; saveLocalDone(map); render(); });
+  }
   render();
 }
 
-// Filters
+function onBypass(a){
+  const pwd = prompt("Admin password to bypass:");
+  if(pwd !== CONFIG.adminPassword){ alert("Incorrect password."); return; }
+  const map = loadBypass();
+  const was = !!map[a.id];
+  if (was){ delete map[a.id]; a.status="UNKNOWN"; saveBypass(map); showToast("Bypass removed."); }
+  else    { map[a.id]=true; a.status="BYPASSED"; saveBypass(map); showToast("Bypassed (hidden in filters)."); }
+  render();
+}
+
+/* ---------- filters and listeners ---------- */
 ["#searchInput","#fLate","#fToday","#fTomorrow","#fUpcoming","#fDone","#fBypassed"].forEach(sel=>{
   el(sel)?.addEventListener(sel==="#searchInput"?"input":"change", render);
 });
 
-// Fresh data
 document.addEventListener("assignments:loaded", e=>{
   const list = e.detail || [];
   const done = loadLocalDone();
@@ -173,7 +197,7 @@ document.addEventListener("assignments:loaded", e=>{
   render();
 });
 
-// -------- Admin: clean, professional center --------
+/* ---------- Admin center (unchanged logic, cleaner fields) ---------- */
 const adminModal = el("#adminModal");
 el("#adminBtn").addEventListener("click", ()=>adminModal.showModal());
 el("#adminClose").addEventListener("click", ()=>adminModal.close());
@@ -190,130 +214,117 @@ el("#adminUnlock").addEventListener("click", ()=>{
 });
 
 function loadAdminUI(){
-  // Recipients
+  // recipients
   const recs = loadRecipients();
   const list = el("#recipientsList");
-  list.innerHTML = "";
-  for(const r of recs){
-    const row = document.createElement("div");
-    row.className = "item";
-    row.innerHTML = `<div>${r.name} <span class="muted small">${r.email||"—"} ${r.chatId?("· TG:"+r.chatId):""}</span></div>`;
-    const del = document.createElement("button");
-    del.className = "btn";
-    del.textContent = "Remove";
-    del.addEventListener("click", ()=>{
-      const upd = loadRecipients().filter(x=>x.id!==r.id);
-      saveRecipients(upd); loadAdminUI();
-    });
-    row.appendChild(del);
-    list.appendChild(row);
+  if (list){
+    list.innerHTML = "";
+    for(const r of recs){
+      const row = document.createElement("div");
+      row.className = "item";
+      row.innerHTML = `<div>${r.name} <span class="muted small">${r.email||"—"} ${r.chatId?("· TG:"+r.chatId):""}</span></div>`;
+      const del = document.createElement("button");
+      del.className = "btn";
+      del.textContent = "Remove";
+      del.addEventListener("click", ()=>{
+        const upd = loadRecipients().filter(x=>x.id!==r.id);
+        saveRecipients(upd); loadAdminUI();
+      });
+      row.appendChild(del);
+      list.appendChild(row);
+    }
   }
 
-  // Templates
+  // templates
   const tmpls = loadTemplates();
   const tlist = el("#templatesList");
-  tlist.innerHTML = "";
-  Object.entries(tmpls).forEach(([name,body])=>{
-    const row = document.createElement("div");
-    row.className = "item";
-    row.innerHTML = `<div><b>${name}</b><div class="small muted">${body}</div></div>`;
-    const del = document.createElement("button");
-    del.className = "btn";
-    del.textContent = "Remove";
-    del.addEventListener("click", ()=>{
-      const m = loadTemplates(); delete m[name]; saveTemplates(m); loadAdminUI();
+  if (tlist){
+    tlist.innerHTML = "";
+    Object.entries(tmpls).forEach(([name,body])=>{
+      const row = document.createElement("div");
+      row.className = "item";
+      row.innerHTML = `<div><b>${name}</b><div class="small muted">${body}</div></div>`;
+      const del = document.createElement("button");
+      del.className = "btn";
+      del.textContent = "Remove";
+      del.addEventListener("click", ()=>{
+        const m = loadTemplates(); delete m[name]; saveTemplates(m); loadAdminUI();
+      });
+      row.appendChild(del);
+      tlist.appendChild(row);
     });
-    row.appendChild(del);
-    tlist.appendChild(row);
-  });
+  }
 
+  // rules
   const ns = loadNotifySettings();
-  el("#quiet").value = ns.quiet||"";
-  el("#dueSoonHrs").value = ns.dueSoonHours??24;
-  el("#onLate").checked = !!ns.onLate;
-  el("#summaryTime").value = ns.summaryTime||"";
-  el("#alertTemplate").value = ns.alertTemplate||"";
+  el("#quiet")?.setAttribute("value", ns.quiet||"");
+  if (el("#dueSoonHrs")) el("#dueSoonHrs").value = ns.dueSoonHours??24;
+  if (el("#onLate")) el("#onLate").checked = !!ns.onLate;
+  el("#summaryTime")?.setAttribute("value", ns.summaryTime||"");
+  el("#alertTemplate")?.setAttribute("value", ns.alertTemplate||"");
 
+  // channels
   const tg = loadTelegram();
-  el("#tgEnable").checked = !!tg.enabled;
-  el("#tgToken").value = tg.botToken || "";
-  el("#tgChatIds").value = tg.chatIds || "";
+  if (el("#tgEnable")) el("#tgEnable").checked = !!tg.enabled;
+  if (el("#tgToken"))  el("#tgToken").value  = tg.botToken || "";
+  if (el("#tgChatIds"))el("#tgChatIds").value= tg.chatIds || "";
 
   const em = loadEmail();
-  el("#emailEnable").checked = !!em.enabled;
-  el("#emailSubject").value = em.subject || "Homework Reminder";
+  if (el("#emailEnable")) el("#emailEnable").checked = !!em.enabled;
+  if (el("#emailSubject")) el("#emailSubject").value = em.subject || "Homework Reminder";
 }
 
-el("#addRecipient").addEventListener("click", ()=>{
-  const name = el("#recName").value.trim();
-  const email = el("#recEmail").value.trim();
-  const chatId = el("#recChatId").value.trim();
+el("#addRecipient")?.addEventListener("click", ()=>{
+  const name = el("#recName")?.value.trim();
+  const email = el("#recEmail")?.value.trim();
+  const chatId = el("#recChatId")?.value.trim();
   if(!name || (!email && !chatId)) return;
   const recs = loadRecipients();
   recs.push({ id: `${Date.now()}-${Math.random()}`, name, email, chatId });
   saveRecipients(recs);
-  el("#recName").value = ""; el("#recEmail").value = ""; el("#recChatId").value = "";
+  if (el("#recName")) el("#recName").value = "";
+  if (el("#recEmail")) el("#recEmail").value = "";
+  if (el("#recChatId")) el("#recChatId").value = "";
   loadAdminUI();
 });
-
-el("#addTemplate").addEventListener("click", ()=>{
-  const name = el("#tmplName").value.trim();
-  const body = el("#tmplBody").value.trim();
+el("#addTemplate")?.addEventListener("click", ()=>{
+  const name = el("#tmplName")?.value.trim();
+  const body = el("#tmplBody")?.value.trim();
   if(!name || !body) return;
   const t = loadTemplates(); t[name] = body; saveTemplates(t);
   el("#tmplName").value=""; el("#tmplBody").value="";
   loadAdminUI();
 });
-
-el("#saveAdmin").addEventListener("click", ()=>{
-  saveNotifySettings({
-    quiet: el("#quiet").value.trim(),
-    dueSoonHours: Number(el("#dueSoonHrs").value)||24,
-    onLate: el("#onLate").checked,
-    summaryTime: el("#summaryTime").value.trim(),
-    alertTemplate: el("#alertTemplate").value.trim() || "due_soon"
-  });
-  saveTelegram({
-    enabled: el("#tgEnable").checked,
-    botToken: el("#tgToken").value.trim(),
-    chatIds: el("#tgChatIds").value.trim()
-  });
-  saveEmail({
-    enabled: el("#emailEnable").checked,
-    subject: el("#emailSubject").value.trim() || "Homework Reminder"
-  });
+el("#saveAdmin")?.addEventListener("click", ()=>{
+  const ns = {
+    quiet: (el("#quiet")?.value||"").trim(),
+    dueSoonHours: Number(el("#dueSoonHrs")?.value)||24,
+    onLate: !!el("#onLate")?.checked,
+    summaryTime: (el("#summaryTime")?.value||"").trim(),
+    alertTemplate: (el("#alertTemplate")?.value||"due_soon").trim()
+  };
+  saveNotifySettings(ns);
+  const tg = {
+    enabled: !!el("#tgEnable")?.checked,
+    botToken: (el("#tgToken")?.value||"").trim(),
+    chatIds: (el("#tgChatIds")?.value||"").trim()
+  };
+  saveTelegram(tg);
+  const em = {
+    enabled: !!el("#emailEnable")?.checked,
+    subject: (el("#emailSubject")?.value||"Homework Reminder").trim()
+  };
+  saveEmail(em);
   alert("Saved.");
 });
 
-// Test Email
-el("#testEmailBtn")?.addEventListener("click", async ()=>{
-  const pwd = prompt("Admin password to send test email:");
-  if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
-  const em = loadEmail(); if (!em.enabled) { alert("Enable Email first."); return; }
-  const recips = loadRecipients().map(r=>r.email).filter(Boolean);
-  if (!recips.length) { alert("Add at least one recipient with an email."); return; }
-  const text = (el("#testMsg")?.value || "Test: Homework alerts are working ✅").trim();
-  const messages = recips.map(to => ({ to, subject: em.subject || "Homework Reminder", text }));
-  const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/email");
-  const rsp = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: CONFIG.adminPassword, messages }) }).then(r=>r.json());
-  if (!rsp.ok) return alert(rsp.error || "Email send failed");
-  alert(`Sent ${rsp.sent} emails`);
+/* hook search text */
+el("#searchInput")?.addEventListener("input", render);
+
+/* ensure Sync button forces a run */
+document.getElementById("syncBtn")?.addEventListener("click", () => {
+  syncFromClassroom(true).catch(console.error);
 });
 
-// Test Telegram
-el("#testTelegramBtn")?.addEventListener("click", async ()=>{
-  const pwd = prompt("Admin password to send test telegram:");
-  if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
-  const tg = loadTelegram(); if (!tg.enabled) { alert("Enable Telegram first."); return; }
-  const ids = (tg.chatIds || "").split(",").map(s=>s.trim()).filter(Boolean);
-  let finalIds = ids.length ? ids : loadRecipients().map(r=>r.chatId).filter(Boolean);
-  if (!tg.botToken || !finalIds.length) { alert("Enter bot token and at least one chat id (global or per-recipient)."); return; }
-  const text = (el("#testMsg")?.value || "Test: Homework alerts are working ✅").trim();
-  const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram");
-  const rsp = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: CONFIG.adminPassword, token: tg.botToken, chatId: finalIds, messages:[text] }) }).then(r=>r.json());
-  if (!rsp.ok) return alert(rsp.error || "Telegram send failed");
-  alert(`Sent ${rsp.sent} telegram messages`);
-});
-
-// First paint
+/* initial paint */
 render();
