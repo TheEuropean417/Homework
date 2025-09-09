@@ -1,8 +1,8 @@
 const { google } = require("googleapis");
 
 const ALLOW_ORIGINS = [
-  "https://theeuropean417.github.io",          // your GitHub Pages site
-  "http://localhost:5500",                     // local testing (python -m http.server 5500)
+  "https://theeuropean417.github.io",   // your GitHub Pages site
+  "http://localhost:5500",              // for local testing
   "http://127.0.0.1:5500"
 ];
 
