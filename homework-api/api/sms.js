@@ -1,5 +1,8 @@
 // homework-api/api/sms.js
-import Twilio from "twilio";
+// Email-to-SMS sender for AT&T via SMTP (free). Works with any SMTP account.
+// Default gateway is AT&T (txt.att.net). You can override via env.
+
+import nodemailer from "nodemailer";
 
 const ALLOW_ORIGINS = [
   "https://theeuropean417.github.io",
@@ -16,32 +19,65 @@ function cors(res, origin){
   res.setHeader("Access-Control-Allow-Headers","Content-Type");
 }
 
+// Normalize US phone like "+1 (417) 555-0123" -> "4175550123"
+function normalizeUS10Digits(phone){
+  if (!phone) return null;
+  const digits = String(phone).replace(/\D+/g, "");
+  // keep last 10 digits (strip leading 1 if present)
+  return digits.length >= 10 ? digits.slice(-10) : null;
+}
+
 export default async function handler(req, res){
   cors(res, req.headers.origin || "");
   if (req.method === "OPTIONS") return res.status(204).end();
 
   try{
+    if (req.method !== "POST") return res.status(405).json({ ok:false, error:"Method not allowed" });
+
     const { password, messages } = req.body || {};
-    if(password !== "241224") return res.status(403).json({ ok:false, error:"Forbidden" });
-    if(!Array.isArray(messages) || !messages.length) return res.status(400).json({ ok:false, error:"No messages" });
+    if (password !== "241224") return res.status(403).json({ ok:false, error:"Forbidden" });
+    if (!Array.isArray(messages) || messages.length === 0) return res.status(400).json({ ok:false, error:"No messages" });
 
-    const sid = process.env.TWILIO_ACCOUNT_SID;
-    const token = process.env.TWILIO_AUTH_TOKEN;
-    const from = process.env.TWILIO_FROM;
-    if(!sid || !token || !from) return res.status(500).json({ ok:false, error:"Twilio not configured" });
+    // SMTP config from env
+    const host = process.env.SMTP_HOST;         // e.g. "smtp.gmail.com"
+    const port = Number(process.env.SMTP_PORT); // e.g. 465 or 587
+    const user = process.env.SMTP_USER;         // e.g. your Gmail address
+    const pass = process.env.SMTP_PASS;         // e.g. app password
+    const from = process.env.SMTP_FROM || user; // e.g. "Homework <you@gmail.com>"
+    const gateway = process.env.SMS_GATEWAY_DOMAIN || "txt.att.net"; // AT&T SMS
+    const secure = String(process.env.SMTP_SECURE || "").toLowerCase() === "true" || port === 465;
 
-    const client = Twilio(sid, token);
+    if (!host || !port || !user || !pass) {
+      return res.status(500).json({ ok:false, error:"SMTP not configured" });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host, port, secure,
+      auth: { user, pass }
+    });
 
     const results = [];
-    for(const m of messages){
-      if(!m.to || !m.body) continue;
+    for (const m of messages){
+      const ten = normalizeUS10Digits(m.to);
+      if (!ten || !m.body) continue;
+
+      const toEmail = `${ten}@${gateway}`;
+      // many gateways ignore Subject; we keep it minimal
+      const mailOptions = {
+        from,
+        to: toEmail,
+        subject: " ",                 // keep blank/minimal for SMS gateways
+        text: String(m.body || "").slice(0, 480)  // keep it short for SMS
+      };
+
       /* eslint-disable no-await-in-loop */
-      const rsp = await client.messages.create({ from, to: m.to, body: m.body });
-      results.push({ sid:rsp.sid, to:m.to });
+      const info = await transporter.sendMail(mailOptions);
+      results.push({ to: toEmail, messageId: info.messageId });
     }
-    res.json({ ok:true, sent:results.length, results });
+
+    res.json({ ok:true, sent: results.length, results });
   }catch(e){
     console.error(e);
-    res.status(500).json({ ok:false, error:String(e?.message||e) });
+    res.status(500).json({ ok:false, error: String(e?.message || e) });
   }
 }
