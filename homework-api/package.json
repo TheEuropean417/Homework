@@ -1,0 +1,15 @@
+{
+  "name": "homework-api",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "node api/health.js",
+    "get-refresh-token": "node scripts/get-refresh-token.js"
+  },
+  "dependencies": {
+    "googleapis": "^131.0.0",
+    "open": "^9.1.0"
+  }
+}
