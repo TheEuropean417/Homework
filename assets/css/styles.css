@@ -154,74 +154,215 @@ body{
 .card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
 .card-actions{display:flex;gap:8px}
 
-/* ======= Modal / Admin Control Center ======= */
-.modal{border:0;padding:0;width:100%;max-width:960px;background:transparent}
-.modal::backdrop{background:rgba(4,8,12,.65)}
-.modal-card{
-  background:var(--panel);
-  border:1px solid #1a2436; border-radius:18px; padding:16px;
-  box-shadow:0 20px 80px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
-}
-.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+/* == Admin Control Center: Light, High-Contrast, Professional Revamp ==================
+   Scope: ONLY inside #adminModal so the rest of the app keeps its existing theme.
+   =============================================================================== */
 
-/* Panels (Recipients / Templates / Rules / Channels / Bypass Manager) */
-.panel{
-  border:1px solid #1a2436; border-radius:14px; padding:14px; margin:10px 0; background:var(--surface-2);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
-}
-.list{display:flex;flex-direction:column;gap:8px}
-.item{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  background:#0e1521; border:1px solid #1a2436; border-radius:12px; padding:10px 12px
-}
-.small{font-size:12px}
-.muted{color:var(--muted)}
-
-/* Gate (password area in Admin) */
-.gate{
-  display:flex; flex-direction:column; gap:12px; padding:14px;
-  background:var(--surface); border:1px solid #1a2436; border-radius:14px;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 0 0 2px rgba(98,168,255,.06);
-}
-.gate .input{
-  height:var(--control-h); font-size:15px;
-  background:linear-gradient(180deg,#0e1724,#0d1520); border:1px solid #223149;
-}
-.gate .input:focus{
-  border-color:#2f4370; box-shadow:0 0 0 3px rgba(98,168,255,.18);
-}
-.gate .btn.primary{
-  height:var(--control-h); font-weight:700;
-  box-shadow:0 0 0 2px rgba(98,168,255,.12) inset, 0 8px 30px rgba(0,0,0,.25);
+#adminModal{
+  /* Light theme tokens (scoped) */
+  --adm-bg:            #ffffff;
+  --adm-bg-subtle:     #f8fafc;    /* panels / rows */
+  --adm-surface:       #ffffff;
+  --adm-border:        #e2e8f0;    /* slate-200 */
+  --adm-border-strong: #cbd5e1;    /* slate-300 */
+  --adm-text:          #0f172a;    /* slate-900 */
+  --adm-muted:         #475569;    /* slate-600 */
+  --adm-soft:          #94a3b8;    /* slate-400 */
+  --adm-primary:       #2563eb;    /* blue-600 */
+  --adm-primary-ink:   #ffffff;
+  --adm-danger:        #dc2626;    /* red-600 */
+  --adm-ok:            #16a34a;    /* green-600 */
+  --adm-shadow:        0 20px 60px rgba(15, 23, 42, .10);
+  --adm-ring:          0 0 0 4px rgba(37, 99, 235, .20);
+  --adm-radius-lg:     16px;
+  --adm-radius-md:     12px;
+  --adm-control-h:     44px;
 }
 
-/* Field grid inside panels */
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.field{display:flex;align-items:center;justify-content:space-between;gap:10px}
+/* Dialog container */
+#adminModal.modal{
+  max-width: 980px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+#adminModal.modal::backdrop{ background: rgba(15,23,42,.45) }
 
-/* Error chip */
-.error{
-  color:#ffd2dc; background:#2b0c15; border:1px solid #471722; padding:8px 10px; border-radius:10px
+/* Card shell */
+#adminModal .modal-card{
+  background: var(--adm-surface);
+  color: var(--adm-text);
+  border: 1px solid var(--adm-border);
+  border-radius: 18px;
+  box-shadow: var(--adm-shadow);
+  padding: 0; /* we’ll pad sections instead */
+  overflow: hidden;
 }
 
-/* ======= Toast (used for small confirmations) ======= */
-.toast{
-  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
-  background:#0f1826; border:1px solid #20314a; border-radius:12px; padding:10px 14px;
-  display:none; gap:10px; align-items:center; z-index:50
+/* Sticky, clean header */
+#adminModal .modal-head{
+  position: sticky; top: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(#ffffff, #fafcff);
+  border-bottom: 1px solid var(--adm-border);
 }
-.toast.show{display:flex}
+#adminModal .modal-head h3{
+  margin: 0; font-size: 1.05rem; letter-spacing: .2px;
+}
 
-/* ======= Responsive ======= */
-@media (max-width:480px){
-  :root{ --badge-h:28px; }
-  .badge{ padding:0 12px; font-size:11px; }
-  .grid-2{grid-template-columns:1fr}  /* stack form fields on phones */
-}
-@media (min-width:640px){ .cards{grid-template-columns:1fr 1fr} }
-@media (min-width:1024px){ .cards{grid-template-columns:1fr 1fr 1fr} }
+/* Generic section padding */
+#adminModal .admin,
+#adminModal .gate{ padding: 16px 18px }
 
-/* ======= Motion Safety ======= */
-@media (prefers-reduced-motion:reduce){
-  .badge.today,.badge.tomorrow,.dot.today,.dot.tomorrow,.stat.today,.stat.tom{animation:none}
+/* Buttons (scoped) */
+#adminModal .btn{
+  height: var(--adm-control-h);
+  padding: 10px 14px;
+  border-radius: var(--adm-radius-md);
+  font-weight: 600;
+  border: 1px solid var(--adm-border);
+  background: #f8fafc;
+  color: var(--adm-text);
+  transition: .15s ease;
 }
+#adminModal .btn:hover{ border-color: var(--adm-border-strong); background: #f1f5f9 }
+#adminModal .btn.primary{
+  background: var(--adm-primary);
+  color: var(--adm-primary-ink);
+  border-color: var(--adm-primary);
+}
+#adminModal .btn.primary:hover{ filter: brightness(1.05) }
+#adminModal .btn.ghost{
+  background: transparent; border: 1px solid var(--adm-border); height: var(--adm-control-h);
+}
+
+/* Inputs + Textareas (scoped) */
+#adminModal .input,
+#adminModal .textarea{
+  width: 100%;
+  height: var(--adm-control-h);
+  padding: 0 12px;
+  border-radius: var(--adm-radius-md);
+  border: 1px solid var(--adm-border);
+  background: #ffffff;
+  color: var(--adm-text);
+  outline: 0;
+  transition: .15s ease;
+}
+#adminModal .textarea{ height: auto; padding: 12px }
+#adminModal .input::placeholder,
+#adminModal .textarea::placeholder{ color: #94a3b8 }
+#adminModal .input:focus,
+#adminModal .textarea:focus{
+  border-color: var(--adm-primary);
+  box-shadow: var(--adm-ring);
+}
+
+/* Password row (gate) */
+#adminModal .gate{
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--adm-bg-subtle);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-lg);
+}
+#adminModal .gate .title{ font-weight: 700; }
+#adminModal .gate .hint{ color: var(--adm-muted); font-size: .92rem }
+
+#adminModal .input-wrap{ display: flex; align-items: center; gap: 8px }
+#adminModal .eyebtn{
+  width: 42px; height: 42px; display: grid; place-items: center;
+  border-radius: 10px; cursor: pointer;
+  background: #ffffff; color: var(--adm-muted);
+  border: 1px solid var(--adm-border);
+}
+#adminModal .eyebtn:hover{ border-color: var(--adm-border-strong) }
+
+/* Panels (Recipients / Templates / Rules / Channels / Bypass) */
+#adminModal .panel{
+  background: var(--adm-bg-subtle);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-lg);
+  padding: 14px;
+  box-shadow: inset 0 1px 0 #ffffff;
+}
+#adminModal .panel h4{ margin: 0 0 6px; font-size: 1rem }
+#adminModal .panel .sub{ color: var(--adm-muted); font-size: .92rem }
+
+/* List rows inside panels */
+#adminModal .list{ display: flex; flex-direction: column; gap: 8px }
+#adminModal .item{
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-md);
+  padding: 10px 12px;
+}
+
+/* Table-like header row (recipients list) */
+#adminModal .table{
+  border: 1px solid var(--adm-border);
+  border-radius: var(--adm-radius-md);
+  overflow: hidden;
+}
+#adminModal .table-row{
+  display: grid; grid-template-columns: 1.2fr 1.6fr 1fr .8fr;
+  gap: 12px; padding: 10px 12px; align-items: center;
+}
+#adminModal .table-row.head{
+  background: #f1f5f9; color: var(--adm-text); font-weight: 700;
+  border-bottom: 1px solid var(--adm-border);
+}
+#adminModal .table-row + .table-row{ border-top: 1px solid var(--adm-border) }
+#adminModal .right{ text-align: right }
+
+/* Field grid utilities (mobile-first) */
+#adminModal .grid-2{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+#adminModal .grid-3{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px }
+@media (max-width: 820px){ #adminModal .grid-3{ grid-template-columns: 1fr 1fr } }
+@media (max-width: 620px){ #adminModal .grid-2, #adminModal .grid-3{ grid-template-columns: 1fr } }
+
+/* Labels & microcopy */
+#adminModal .label{ display:block; margin:0 0 6px; font-weight:600; font-size:.9rem; color: var(--adm-text) }
+#adminModal .muted{ color: var(--adm-muted) }
+#adminModal .small{ font-size: 12px }
+
+/* Error & success chips */
+#adminModal .error{
+  color: #7f1d1d; background: #fee2e2; border: 1px solid #fecaca;
+  padding: 8px 10px; border-radius: 10px;
+}
+#adminModal .ok{
+  color: #064e3b; background: #dcfce7; border: 1px solid #bbf7d0;
+  padding: 8px 10px; border-radius: 10px;
+}
+
+/* Footer actions stay visible on phones */
+#adminModal .modal-foot{
+  position: sticky; bottom: 0; z-index: 2;
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 12px 18px; background: linear-gradient(#ffffff, #fafcff);
+  border-top: 1px solid var(--adm-border);
+}
+
+/* Switch style (for any checkbox toggles) */
+#adminModal .switch{ display:flex; align-items:center; gap:10px; cursor:pointer }
+#adminModal .switch input{ display:none }
+#adminModal .slider{
+  width: 44px; height: 26px; border-radius: 999px; background: #e5e7eb; position: relative; transition: .2s ease;
+  box-shadow: inset 0 0 0 1px #d1d5db;
+}
+#adminModal .slider::after{
+  content: ""; position: absolute; inset: 3px auto 3px 3px; width: 20px; border-radius: 50%;
+  background: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,.15); transition: .2s ease;
+}
+#adminModal .switch input:checked + .slider{ background: var(--adm-primary) }
+#adminModal .switch input:checked + .slider::after{ transform: translateX(18px) }
+
+/* Toast (confirmation) – keep light */
+#adminModal .toast{
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+  background: #ffffff; border: 1px solid var(--adm-border); border-radius: 12px; padding: 10px 14px;
+  display: none; gap: 10px; align-items: center; z-index: 50; color: var(--adm-text);
+}
+#adminModal .toast.show{ display: flex }
