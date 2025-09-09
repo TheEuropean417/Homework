@@ -218,9 +218,7 @@ el("#saveAdmin").addEventListener("click", ()=>{
   alert("Saved.");
 });
 
-// Test SMS sender (cleaned up)
-import { loadRecipients } from "./state.js";  // put this at the top of ui.js with your other imports
-
+// Test SMS sender
 const testBtn = el("#sendTestSms");
 const testBody = el("#smsTestBody");
 const testStatus = el("#sendTestSmsStatus");
@@ -238,7 +236,7 @@ if (testBtn) {
 
     try {
       const body = (testBody?.value || "Test message").trim();
-      const recipients = loadRecipients();
+      const recipients = loadRecipients();   // ← use it directly
       if (!recipients.length) throw new Error("No recipients configured");
 
       const payload = {
