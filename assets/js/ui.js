@@ -1,5 +1,12 @@
 import { CONFIG } from "./config.js";
+
+// Ensure the Sync button triggers the fetch (and forces a visible run)
 import { syncFromClassroom } from "./classroom.js";
+
+document.getElementById("syncBtn")?.addEventListener("click", () => {
+  syncFromClassroom(true).catch(console.error);
+});
+
 import {
   loadBypass, saveBypass,
   loadRecipients, saveRecipients,
