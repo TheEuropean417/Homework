@@ -1,4 +1,4 @@
-// assets/js/ui.js — complete replacement
+// assets/js/ui.js — COMPLETE (fixed imports for notify settings)
 
 // ------------------------ Imports ------------------------
 import { CONFIG } from "./config.js";
@@ -6,7 +6,7 @@ import { syncFromClassroom } from "./classroom.js";
 import {
   loadRecipients, saveRecipients,
   loadTemplates,  saveTemplates,
-  loadSmsSettings, saveSmsSettings,
+  loadNotifySettings, saveNotifySettings,   // ✅ correct names from state.js
   loadBypass,     saveBypass
 } from "./state.js";
 import { sendEmailsToConfiguredRecipients } from "./email.js";
@@ -30,7 +30,7 @@ const cards   = el("#cards");
 const loading = el("#loading");
 const empty   = el("#empty");
 
-let assignments = []; // normalized objects: {id,title,course,notes,status,dueDateISO}
+let assignments = []; // normalized: {id,title,course,notes,status,dueDateISO}
 
 // ------------------------ Utilities ------------------------
 function fmtDate(iso){ try{ return iso ? new Date(iso).toLocaleString() : "—"; }catch{ return "—"; } }
@@ -60,18 +60,12 @@ function shouldShow(a){
   const showDone= el("#toggleCompleted")?.checked ?? false;
   const showByp = el("#toggleBypassed")?.checked ?? false;
 
-  // quick search filter
   if(!matchesSearch(a,q)) return false;
-
-  // BYPASSED visibility
   if(a.status==="BYPASSED" && !q && !showByp) return false;
 
-  // group-based visibility
   if(a.status==="LATE")                       return showLate;
   if(a.status==="DONE" || a.status==="COMPLETED") return showDone;
-
-  // treat everything else as active/due
-  return showDue;
+  return showDue; // everything else = active/due
 }
 
 // ------------------------ Rendering ------------------------
@@ -166,13 +160,9 @@ function wireSync(){
     try{
       loading && (loading.style.display = "block");
       btn.disabled = true;
-      const res = await syncFromClassroom(); // your module populates data / local storage
-      // Option A: If syncFromClassroom returns normalized items, use them
+      const res = await syncFromClassroom(); // expected to populate data / return list
       if (Array.isArray(res?.assignments)) {
         assignments = res.assignments;
-      } else {
-        // Option B: fall back to what classroom.js places in state; caller can expose accessors if needed
-        // For safety we just leave assignments as-is unless set elsewhere
       }
       render();
       toast("Classroom sync complete");
@@ -199,7 +189,7 @@ function wireAdminModal(){
   openBtn?.addEventListener("click", ()=> modal.showModal());
   closeBtn?.addEventListener("click", ()=> modal.close());
 
-  // Eye toggle on password
+  // password show/hide
   el("#adminPwToggle")?.addEventListener("click", (e) => {
     const inp = el("#adminPassword");
     if(!inp) return;
@@ -218,7 +208,7 @@ function wireAdminModal(){
     el("#adminErr")?.classList.add("hidden");
     el("#adminGate")?.classList.add("hidden");
     el("#adminBody")?.classList.remove("hidden");
-    loadAdminUI(); // populate panels once unlocked
+    loadAdminUI();
     buildBypassList();
   });
 }
@@ -237,13 +227,15 @@ function buildRecipientsPanel(){
     row.innerHTML = `
       <div>${r.name || "—"}</div>
       <div>${r.email || "—"}</div>
-      <div>${r.telegram_chat_id || "—"}</div>
+      <div>${r.telegram_chat_id || r.chatId || "—"}</div>
       <div class="right">
-        <button class="acc-chip acc-danger btn remove">Remove</button>
+        <button class="btn remove">Remove</button>
       </div>
     `;
     row.querySelector(".remove")?.addEventListener("click", ()=>{
-      const next = (loadRecipients() || []).filter(x => !(x.name===r.name && x.email===r.email && x.telegram_chat_id===r.telegram_chat_id));
+      const next = (loadRecipients() || []).filter(x =>
+        !(x.name===r.name && x.email===r.email && (x.telegram_chat_id||x.chatId)===(r.telegram_chat_id||r.chatId))
+      );
       saveRecipients(next);
       buildRecipientsPanel();
       toast("Recipient removed");
@@ -304,13 +296,13 @@ function buildTemplatesPanel(){
     toast("Template removed");
   });
 
-  // initialize
   loadCurrent();
 }
 
-// ------------------------ Admin: Notification rules panel (SMS) ------------------------
+// ------------------------ Admin: Notification rules panel ------------------------
 function buildRulesPanel(){
-  const s = loadSmsSettings();
+  // uses notifySettings from state.js (not sms-only) :contentReference[oaicite:1]{index=1}
+  const s = loadNotifySettings();
   const qh   = el("#ruleQuietHours");
   const soon = el("#ruleDueSoonHours");
   const late = el("#ruleNotifyLate");
@@ -325,20 +317,19 @@ function buildRulesPanel(){
 
   save?.addEventListener("click", ()=>{
     const next = {
-      enabled: true,
       quiet: (qh?.value || "21:00-07:00").trim(),
       dueSoonHours: Number(soon?.value || 24),
       onLate: !!(late?.checked),
       summaryTime: (dsum?.value || "19:30").trim(),
       alertTemplate: s.alertTemplate || "due_soon"
     };
-    saveSmsSettings(next);
+    saveNotifySettings(next);
     toast("Rules saved");
   });
 
   reset?.addEventListener("click", ()=>{
-    saveSmsSettings({
-      enabled:false, quiet:"21:00-07:00", dueSoonHours:24, onLate:true, summaryTime:"19:30", alertTemplate:"due_soon"
+    saveNotifySettings({
+      quiet:"21:00-07:00", dueSoonHours:24, onLate:true, summaryTime:"19:30", alertTemplate:"due_soon"
     });
     buildRulesPanel();
     toast("Rules reset");
@@ -422,10 +413,7 @@ function boot(){
   wireSync();
   wireAdminModal();
 
-  // Auto-sync if configured
-  if (CONFIG.autoSyncOnLoad) {
-    el("#syncBtn")?.click();
-  }
+  if (CONFIG.autoSyncOnLoad) el("#syncBtn")?.click();
 }
 
 document.addEventListener("DOMContentLoaded", boot);
