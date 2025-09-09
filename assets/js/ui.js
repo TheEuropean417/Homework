@@ -218,7 +218,9 @@ el("#saveAdmin").addEventListener("click", ()=>{
   alert("Saved.");
 });
 
-// Test SMS sender (replace the previous block)
+// Test SMS sender (cleaned up)
+import { loadRecipients } from "./state.js";  // put this at the top of ui.js with your other imports
+
 const testBtn = el("#sendTestSms");
 const testBody = el("#smsTestBody");
 const testStatus = el("#sendTestSmsStatus");
@@ -226,20 +228,39 @@ const testStatus = el("#sendTestSmsStatus");
 if (testBtn) {
   testBtn.addEventListener("click", async () => {
     const pwd = prompt("Admin password to send test SMS:");
-    if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+    if (pwd !== CONFIG.adminPassword) { 
+      alert("Incorrect password."); 
+      return; 
+    }
 
-    testBtn.disabled = true; testStatus.textContent = "Sending…";
+    testBtn.disabled = true; 
+    testStatus.textContent = "Sending…";
+
     try {
       const body = (testBody?.value || "Test message").trim();
-      const rsp = await (await fetch(CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/sms"),{
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ password: CONFIG.adminPassword, messages: (await import("./state.js")).then(m=>m.loadRecipients()).then(rs=>rs.map(r=>({ to: r.phone, body }))) })
-      })).json();
+      const recipients = loadRecipients();
+      if (!recipients.length) throw new Error("No recipients configured");
 
+      const payload = {
+        password: CONFIG.adminPassword,
+        messages: recipients.map(r => ({ to: r.phone, body }))
+      };
+
+      const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/sms");
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const rsp = await res.json();
       if (!rsp.ok) throw new Error(rsp.error || "Unknown SMS error");
 
-      const lines = (rsp.results || []).map(r => r.ok ? `✅ ${r.to} via ${r.via || "sms"} (id: ${r.messageId})` : `❌ ${r.to} — ${r.error}`);
+      const lines = (rsp.results || []).map(r => 
+        r.ok ? `✅ ${r.to} via ${r.via || "sms"} (id: ${r.messageId})` 
+             : `❌ ${r.to} — ${r.error}`
+      );
+
       testStatus.textContent = `Sent ${rsp.sent} / ${(rsp.results||[]).length}`;
       alert(lines.join("\n") || `Sent ${rsp.sent}`);
     } catch (e) {
