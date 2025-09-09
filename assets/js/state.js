@@ -1,16 +1,14 @@
-// Simple local storage wrapper
+// Local storage helpers
 export const store = {
-  get(key, fallback){
-    try{ return JSON.parse(localStorage.getItem(key)) ?? fallback; }catch{ return fallback; }
-  },
+  get(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)) ?? fallback; }catch{ return fallback; } },
   set(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 };
 
-// Recipients: [{id, name, phone}]
+// Recipients: [{id, name, email, chatId}]
 export function loadRecipients(){ return store.get("recipients", []); }
 export function saveRecipients(list){ store.set("recipients", list); }
 
-// Templates: { name: body }
+// Templates for notifications
 export function loadTemplates(){
   return store.get("templates", {
     due_soon: "Reminder: {title} for {course} is due {dueDate} ({dueIn}). Status: {status}."
@@ -18,10 +16,9 @@ export function loadTemplates(){
 }
 export function saveTemplates(map){ store.set("templates", map); }
 
-// SMS rules/settings
-export function loadSmsSettings(){
-  return store.get("smsSettings", {
-    enabled: false,
+// Notification rules (shared)
+export function loadNotifySettings(){
+  return store.get("notifySettings", {
     quiet: "21:00-07:00",
     dueSoonHours: 24,
     onLate: true,
@@ -29,16 +26,18 @@ export function loadSmsSettings(){
     alertTemplate: "due_soon"
   });
 }
-export function saveSmsSettings(s){ store.set("smsSettings", s); }
+export function saveNotifySettings(s){ store.set("notifySettings", s); }
 
-// BYPASSED map by assignment id
+// Status maps
 export function loadBypass(){ return store.get("bypassMap", {}); }
 export function saveBypass(map){ store.set("bypassMap", map); }
-
-// last-run timestamps to avoid spamming notifications
+export function loadLocalDone(){ return store.get("localDoneMap", {}); }
+export function saveLocalDone(map){ store.set("localDoneMap", map); }
 export function loadLastSent(){ return store.get("lastSent", {}); }
 export function saveLastSent(map){ store.set("lastSent", map); }
 
-// Telegram settings
-export function loadTelegram(){ return store.get("telegram", { enabled:false, botToken:"", chatId:"" }); }
+// Channels
+export function loadTelegram(){ return store.get("telegram", { enabled:false, botToken:"", chatIds:"" }); } // chatIds CSV or single
 export function saveTelegram(v){ store.set("telegram", v); }
+export function loadEmail(){ return store.get("email", { enabled:false, subject:"Homework Reminder" }); }
+export function saveEmail(v){ store.set("email", v); }

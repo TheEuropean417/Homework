@@ -4,8 +4,9 @@ import {
   loadBypass, saveBypass,
   loadRecipients, saveRecipients,
   loadTemplates, saveTemplates,
-  loadSmsSettings, saveSmsSettings,
-  loadTelegram, saveTelegram
+  loadNotifySettings, saveNotifySettings,
+  loadLocalDone, saveLocalDone,
+  loadTelegram, saveTelegram, loadEmail, saveEmail
 } from "./state.js";
 
 const el = sel => document.querySelector(sel);
@@ -14,42 +15,72 @@ const empty = el("#empty");
 
 let assignments = [];
 
-function statusClass(s){
-  if(s==="LATE") return "late";
-  if(s==="DONE"||s==="COMPLETED") return "done";
-  if(s==="BYPASSED") return "byp";
-  return "due";
+// ---- categorization for strong visuals ----
+function catOf(a){
+  if(a.status === "BYPASSED") return "BYPASSED";
+  if(a.status === "COMPLETED" || a.status === "DONE") return "DONE";
+  if(!a.dueDateISO) return "UPCOMING";
+  const now = new Date();
+  const due = new Date(a.dueDateISO);
+  if (due < now) return "LATE";
+  const sameDay = (x,y)=>x.getFullYear()===y.getFullYear() && x.getMonth()===y.getMonth() && x.getDate()===y.getDate();
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate()+1);
+  if (sameDay(due, now)) return "TODAY";
+  if (sameDay(due, tomorrow)) return "TOMORROW";
+  return "UPCOMING";
 }
-function matchesSearch(a, q){
+function badgeClass(cat){
+  return { LATE:"late", TODAY:"due", TOMORROW:"due", UPCOMING:"due", DONE:"done", BYPASSED:"byp" }[cat] || "due";
+}
+function fmtDate(iso){ return iso ? new Date(iso).toLocaleString() : "—"; }
+
+function recomputeSummary(list){
+  const c = {LATE:0,TODAY:0,TOMORROW:0,UPCOMING:0,DONE:0,BYPASSED:0};
+  list.forEach(a => c[catOf(a)] = (c[catOf(a)]||0)+1);
+  el("#sumLate").textContent = c.LATE||0;
+  el("#sumToday").textContent = c.TODAY||0;
+  el("#sumTomorrow").textContent = c.TOMORROW||0;
+  el("#sumUpcoming").textContent = c.UPCOMING||0;
+  el("#sumDone").textContent = c.DONE||0;
+}
+
+function passFilters(a){
+  const cat = catOf(a);
+  const on = {
+    LATE: el("#fLate").checked,
+    TODAY: el("#fToday").checked,
+    TOMORROW: el("#fTomorrow").checked,
+    UPCOMING: el("#fUpcoming").checked,
+    DONE: el("#fDone").checked,
+    BYPASSED: el("#fBypassed").checked
+  }[cat];
+  if (!on) return false;
+  const q = el("#searchInput").value.trim().toLowerCase();
   if(!q) return true;
-  q = q.toLowerCase();
   return (a.title?.toLowerCase().includes(q) ||
           a.course?.toLowerCase().includes(q) ||
           a.notes?.toLowerCase().includes(q) ||
-          a.status?.toLowerCase().includes(q));
+          (a.status||"").toLowerCase().includes(q));
 }
-function shouldShow(a){
-  const q = el("#searchInput").value.trim();
-  const showLate = el("#toggleLate").checked;
-  const showDue = el("#toggleDueSoon").checked;
-  const showDone = el("#toggleCompleted").checked;
-  const showByp = el("#toggleBypassed").checked;
-
-  if(!matchesSearch(a,q)) return false;
-  if(a.status==="BYPASSED" && !q && !showByp) return false;
-
-  if(a.status==="LATE") return showLate;
-  if(a.status==="DONE"||a.status==="COMPLETED") return showDone;
-  return showDue;
-}
-function fmtDate(iso){ return iso ? new Date(iso).toLocaleString() : "—"; }
 
 function render(){
   cards.innerHTML = "";
   let shown = 0;
-  for(const a of assignments){
-    if(!shouldShow(a)) continue;
+
+  const order = {LATE:0,TODAY:1,TOMORROW:2,UPCOMING:3,DONE:4,BYPASSED:5};
+  const sorted = [...assignments].sort((a,b)=>{
+    const ca = catOf(a), cb = catOf(b);
+    if (order[ca] !== order[cb]) return order[ca]-order[cb];
+    const da = a.dueDateISO ? new Date(a.dueDateISO).getTime() : Infinity;
+    const db = b.dueDateISO ? new Date(b.dueDateISO).getTime() : Infinity;
+    return da - db;
+  });
+
+  for(const a of sorted){
+    if(!passFilters(a)) continue;
     shown++;
+
+    const cat = catOf(a);
 
     const c = document.createElement("div");
     c.className = "card";
@@ -58,9 +89,7 @@ function render(){
     head.className = "card-head";
     head.innerHTML = `
       <div class="title">${a.title}</div>
-      <div class="badges">
-        <span class="badge ${statusClass(a.status)}">${a.status || "UNKNOWN"}</span>
-      </div>`;
+      <div class="badges"><span class="badge ${badgeClass(cat)}">${cat.replace("_"," ")}</span></div>`;
     c.appendChild(head);
 
     const meta = document.createElement("div");
@@ -86,6 +115,12 @@ function render(){
     const right = document.createElement("div");
     right.className = "card-actions";
 
+    const doneBtn = document.createElement("button");
+    doneBtn.className = "btn";
+    doneBtn.textContent = (cat==="DONE") ? "Mark Not Done" : "Mark Done";
+    doneBtn.addEventListener("click", ()=>onToggleDone(a));
+    right.appendChild(doneBtn);
+
     const bypassBtn = document.createElement("button");
     bypassBtn.className = "btn";
     bypassBtn.textContent = a.status==="BYPASSED" ? "Un-bypass" : "Bypass";
@@ -99,34 +134,42 @@ function render(){
   }
 
   empty.classList.toggle("hidden", shown>0);
+  recomputeSummary(assignments);
 }
 
+async function onToggleDone(a){
+  const map = loadLocalDone();
+  if (map[a.id]) { delete map[a.id]; a.status = "UNKNOWN"; }
+  else { map[a.id] = true; a.status = "COMPLETED"; }
+  saveLocalDone(map); render();
+}
 async function onBypass(a){
   const pwd = prompt("Admin password to bypass:");
   if(pwd !== CONFIG.adminPassword){ alert("Incorrect password."); return; }
   const map = loadBypass();
   if(map[a.id]) delete map[a.id]; else map[a.id] = true;
   saveBypass(map);
-  a.status = map[a.id] ? "BYPASSED" : (a.status==="BYPASSED"?"UNKNOWN":a.status);
+  a.status = map[a.id] ? "BYPASSED" : "UNKNOWN";
   render();
 }
 
-// Filters & search
-["#searchInput","#toggleLate","#toggleDueSoon","#toggleCompleted","#toggleBypassed"].forEach(sel=>{
-  el(sel).addEventListener(sel==="#searchInput"?"input":"change", render);
+// Filters
+["#searchInput","#fLate","#fToday","#fTomorrow","#fUpcoming","#fDone","#fBypassed"].forEach(sel=>{
+  el(sel)?.addEventListener(sel==="#searchInput"?"input":"change", render);
 });
 
-// Listen for fresh data
+// Fresh data
 document.addEventListener("assignments:loaded", e=>{
-  assignments = e.detail || [];
+  const list = e.detail || [];
+  const done = loadLocalDone();
+  assignments = list.map(a => ({ ...a, status: done[a.id] ? "COMPLETED" : a.status }));
   render();
 });
 
-// Admin modal
+// -------- Admin: clean, professional center --------
 const adminModal = el("#adminModal");
 el("#adminBtn").addEventListener("click", ()=>adminModal.showModal());
 el("#adminClose").addEventListener("click", ()=>adminModal.close());
-
 el("#adminUnlock").addEventListener("click", ()=>{
   const pwd = el("#adminPassword").value.trim();
   if(pwd !== CONFIG.adminPassword){
@@ -140,14 +183,14 @@ el("#adminUnlock").addEventListener("click", ()=>{
 });
 
 function loadAdminUI(){
-  // recipients
+  // Recipients
   const recs = loadRecipients();
   const list = el("#recipientsList");
   list.innerHTML = "";
   for(const r of recs){
     const row = document.createElement("div");
     row.className = "item";
-    row.innerHTML = `<div>${r.name} <span class="muted small">${r.phone}</span></div>`;
+    row.innerHTML = `<div>${r.name} <span class="muted small">${r.email||"—"} ${r.chatId?("· TG:"+r.chatId):""}</span></div>`;
     const del = document.createElement("button");
     del.className = "btn";
     del.textContent = "Remove";
@@ -159,7 +202,7 @@ function loadAdminUI(){
     list.appendChild(row);
   }
 
-  // templates
+  // Templates
   const tmpls = loadTemplates();
   const tlist = el("#templatesList");
   tlist.innerHTML = "";
@@ -177,32 +220,35 @@ function loadAdminUI(){
     tlist.appendChild(row);
   });
 
-  // SMS settings
-  const s = loadSmsSettings();
-  el("#smsEnable").checked = !!s.enabled;
-  el("#smsQuiet").value = s.quiet||"";
-  el("#smsDueSoonHrs").value = s.dueSoonHours??24;
-  el("#smsOnLate").checked = !!s.onLate;
-  el("#smsSummaryTime").value = s.summaryTime||"";
-  el("#smsAlertTemplate").value = s.alertTemplate||"";
+  const ns = loadNotifySettings();
+  el("#quiet").value = ns.quiet||"";
+  el("#dueSoonHrs").value = ns.dueSoonHours??24;
+  el("#onLate").checked = !!ns.onLate;
+  el("#summaryTime").value = ns.summaryTime||"";
+  el("#alertTemplate").value = ns.alertTemplate||"";
 
-  // Telegram settings
   const tg = loadTelegram();
   el("#tgEnable").checked = !!tg.enabled;
   el("#tgToken").value = tg.botToken || "";
-  el("#tgChat").value = tg.chatId || "";
+  el("#tgChatIds").value = tg.chatIds || "";
+
+  const em = loadEmail();
+  el("#emailEnable").checked = !!em.enabled;
+  el("#emailSubject").value = em.subject || "Homework Reminder";
 }
 
 el("#addRecipient").addEventListener("click", ()=>{
   const name = el("#recName").value.trim();
-  const phone = el("#recPhone").value.trim();
-  if(!name || !phone) return;
+  const email = el("#recEmail").value.trim();
+  const chatId = el("#recChatId").value.trim();
+  if(!name || (!email && !chatId)) return;
   const recs = loadRecipients();
-  recs.push({ id: `${Date.now()}-${Math.random()}`, name, phone });
+  recs.push({ id: `${Date.now()}-${Math.random()}`, name, email, chatId });
   saveRecipients(recs);
-  el("#recName").value = ""; el("#recPhone").value = "";
+  el("#recName").value = ""; el("#recEmail").value = ""; el("#recChatId").value = "";
   loadAdminUI();
 });
+
 el("#addTemplate").addEventListener("click", ()=>{
   const name = el("#tmplName").value.trim();
   const body = el("#tmplBody").value.trim();
@@ -211,161 +257,56 @@ el("#addTemplate").addEventListener("click", ()=>{
   el("#tmplName").value=""; el("#tmplBody").value="";
   loadAdminUI();
 });
-el("#saveAdmin").addEventListener("click", ()=>{
-  const s = {
-    enabled: el("#smsEnable").checked,
-    quiet: el("#smsQuiet").value.trim(),
-    dueSoonHours: Number(el("#smsDueSoonHrs").value)||24,
-    onLate: el("#smsOnLate").checked,
-    summaryTime: el("#smsSummaryTime").value.trim(),
-    alertTemplate: el("#smsAlertTemplate").value.trim() || "due_soon"
-  };
-  saveSmsSettings(s);
 
-  const tgNew = {
+el("#saveAdmin").addEventListener("click", ()=>{
+  saveNotifySettings({
+    quiet: el("#quiet").value.trim(),
+    dueSoonHours: Number(el("#dueSoonHrs").value)||24,
+    onLate: el("#onLate").checked,
+    summaryTime: el("#summaryTime").value.trim(),
+    alertTemplate: el("#alertTemplate").value.trim() || "due_soon"
+  });
+  saveTelegram({
     enabled: el("#tgEnable").checked,
     botToken: el("#tgToken").value.trim(),
-    chatId: el("#tgChat").value.trim()
-  };
-  saveTelegram(tgNew);
-
+    chatIds: el("#tgChatIds").value.trim()
+  });
+  saveEmail({
+    enabled: el("#emailEnable").checked,
+    subject: el("#emailSubject").value.trim() || "Homework Reminder"
+  });
   alert("Saved.");
 });
 
-// Test SMS sender
-const testBtn = el("#sendTestSms");
-const testBody = el("#smsTestBody");
-const testStatus = el("#sendTestSmsStatus");
-if (testBtn) {
-  testBtn.addEventListener("click", async () => {
-    const pwd = prompt("Admin password to send test SMS:");
-    if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+// Test Email
+el("#testEmailBtn")?.addEventListener("click", async ()=>{
+  const pwd = prompt("Admin password to send test email:");
+  if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+  const em = loadEmail(); if (!em.enabled) { alert("Enable Email first."); return; }
+  const recips = loadRecipients().map(r=>r.email).filter(Boolean);
+  if (!recips.length) { alert("Add at least one recipient with an email."); return; }
+  const text = (el("#testMsg")?.value || "Test: Homework alerts are working ✅").trim();
+  const messages = recips.map(to => ({ to, subject: em.subject || "Homework Reminder", text }));
+  const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/email");
+  const rsp = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: CONFIG.adminPassword, messages }) }).then(r=>r.json());
+  if (!rsp.ok) return alert(rsp.error || "Email send failed");
+  alert(`Sent ${rsp.sent} emails`);
+});
 
-    testBtn.disabled = true; testStatus.textContent = "Sending…";
-    try {
-      const body = (testBody?.value || "Test message").trim();
-      const recipients = loadRecipients();
-      if (!recipients.length) throw new Error("No recipients configured");
-
-      const payload = {
-        password: CONFIG.adminPassword,
-        messages: recipients.map(r => ({ to: r.phone, body }))
-      };
-      const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/sms");
-      const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) });
-      const rsp = await res.json();
-      if (!rsp.ok) throw new Error(rsp.error || "Unknown SMS error");
-
-      const lines = (rsp.results || []).map(r => r.ok ? `✅ ${r.to} ${r.via ? `(via ${r.via})`:""}`
-                                                     : `❌ ${r.to} — ${r.error}`);
-      testStatus.textContent = `Sent ${rsp.sent} / ${(rsp.results||[]).length}`;
-      alert(lines.join("\n") || `Sent ${rsp.sent}`);
-    } catch (e) {
-      console.error(e);
-      testStatus.textContent = "Failed to send test";
-      alert(String(e.message || e));
-    } finally {
-      testBtn.disabled = false;
-      setTimeout(()=>{ testStatus.textContent = ""; }, 5000);
-    }
-  });
-}
-
-// Test Telegram sender (reads current form values so Save isn't required first)
-const tgBtn = el("#sendTestTelegram");
-const tgStatus = el("#sendTestTelegramStatus");
-if (tgBtn) {
-  tgBtn.addEventListener("click", async () => {
-    const pwd = prompt("Admin password to send test:");
-    if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
-
-    const enabledNow  = document.getElementById("tgEnable")?.checked;
-    const tokenNow    = document.getElementById("tgToken")?.value.trim();
-    const chatNow     = document.getElementById("tgChat")?.value.trim();
-    const saved = loadTelegram() || { enabled:false, botToken:"", chatId:"" };
-
-    const enabled = (typeof enabledNow === "boolean") ? enabledNow : !!saved.enabled;
-    const botToken = tokenNow || saved.botToken;
-    const chatId   = chatNow  || saved.chatId;
-
-    if (!enabled) { alert("Enable Telegram first (toggle the checkbox)."); return; }
-    if (!botToken || !chatId) { alert("Enter bot token and chat ID."); return; }
-
-    tgBtn.disabled = true; tgStatus.textContent = "Sending…";
-    try {
-      const body = (testBody?.value || "Test: Homework alerts are working ✅").trim();
-      const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram");
-      const rsp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ password: CONFIG.adminPassword, token: botToken, chatId, messages: [body] })
-      }).then(r=>r.json());
-
-      if (!rsp.ok) throw new Error(rsp.error || "Telegram send failed");
-      tgStatus.textContent = `Sent ${rsp.sent} message(s)`;
-      const lines = (rsp.results||[]).map(r => r.ok ? `✅ chat ${r.chatId} (msg ${r.msgId})` : `❌ ${r.chatId} — ${r.error}`);
-      alert(lines.join("\n"));
-    } catch (e) {
-      tgStatus.textContent = "Failed";
-      alert(String(e.message || e));
-    } finally {
-      tgBtn.disabled = false;
-      setTimeout(()=>{ tgStatus.textContent = ""; }, 5000);
-    }
-  });
-}
-
-// Fetch Chat IDs (Telegram getUpdates helper)
-const chatBtn = el("#fetchChatIds");
-const chatStatus = el("#fetchChatIdsStatus");
-const chatList = el("#chatIdsList");
-if (chatBtn) {
-  chatBtn.addEventListener("click", async () => {
-    const pwd = prompt("Admin password to fetch chat IDs:");
-    if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
-
-    const tokenNow = document.getElementById("tgToken")?.value.trim();
-    const saved = loadTelegram() || { botToken:"" };
-    const botToken = tokenNow || saved.botToken;
-    if (!botToken) { alert("Enter your Bot Token first."); return; }
-
-    chatBtn.disabled = true; chatStatus.textContent = "Contacting Telegram…";
-    chatList.textContent = "";
-    try {
-      const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram_getupdates");
-      const rsp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ password: CONFIG.adminPassword, token: botToken })
-      }).then(r=>r.json());
-
-      if (!rsp.ok) throw new Error(rsp.error || "Could not fetch updates");
-      if (!rsp.chats?.length) {
-        chatList.textContent = "No chats found. Open Telegram, send any message to your bot, then click this again.";
-      } else {
-        const lines = rsp.chats.map(c => {
-          const label = c.type === "private"
-            ? `DM: ${c.first_name||""} ${c.last_name||""} @${c.username||""}`.trim()
-            : `${c.type.toUpperCase()}: ${c.title||"(no title)"}`;
-          return `• ${label}\n  chat_id: ${c.id}`;
-        });
-        chatList.textContent = lines.join("\n");
-      }
-      chatStatus.textContent = "Done";
-    } catch (e) {
-      chatStatus.textContent = "Failed";
-      alert(String(e.message || e));
-    } finally {
-      chatBtn.disabled = false;
-      setTimeout(()=>{ chatStatus.textContent = ""; }, 4000);
-    }
-  });
-}
+// Test Telegram
+el("#testTelegramBtn")?.addEventListener("click", async ()=>{
+  const pwd = prompt("Admin password to send test telegram:");
+  if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+  const tg = loadTelegram(); if (!tg.enabled) { alert("Enable Telegram first."); return; }
+  const ids = (tg.chatIds || "").split(",").map(s=>s.trim()).filter(Boolean);
+  let finalIds = ids.length ? ids : loadRecipients().map(r=>r.chatId).filter(Boolean);
+  if (!tg.botToken || !finalIds.length) { alert("Enter bot token and at least one chat id (global or per-recipient)."); return; }
+  const text = (el("#testMsg")?.value || "Test: Homework alerts are working ✅").trim();
+  const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram");
+  const rsp = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ password: CONFIG.adminPassword, token: tg.botToken, chatId: finalIds, messages:[text] }) }).then(r=>r.json());
+  if (!rsp.ok) return alert(rsp.error || "Telegram send failed");
+  alert(`Sent ${rsp.sent} telegram messages`);
+});
 
 // First paint
 render();
-
-// Hook Sync button
-document.getElementById("syncBtn")?.addEventListener("click", () => {
-  syncFromClassroom().catch(console.error);
-});
