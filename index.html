@@ -52,7 +52,7 @@
   <dialog id="adminModal" class="modal">
     <form method="dialog" class="modal-card" id="adminForm">
       <div class="modal-head">
-        <h3>Admin Control Center</h3>
+        <h3 id="accTitle">Admin Control Center</h3>
         <button type="button" id="adminClose" class="icon-btn" aria-label="Close">✕</button>
       </div>
 
@@ -62,8 +62,8 @@
           <div class="auth-title">Administrator Access</div>
           <div class="auth-sub">Enter your admin password to manage recipients, templates, and notifications.</div>
           <div class="input-wrap">
-            <input id="adminPassword" class="input auth-input" type="password" placeholder="Admin password">
-            <button type="button" class="eyebtn" id="adminPwToggle" aria-label="Show password">👁</button>
+            <input id="adminPassword" class="input auth-input" type="password" placeholder="Admin password" aria-labelledby="accTitle">
+            <button type="button" class="eyebtn" id="adminPwToggle" aria-label="Show password" data-toggle="password">👁</button>
           </div>
           <div id="adminErr" class="error hidden"></div>
           <div class="row end"><button id="adminUnlock" type="button" class="btn primary">Unlock</button></div>

@@ -233,6 +233,14 @@ el("#adminUnlock").addEventListener("click", ()=>{
   buildBypassList(); // populate Bypass Manager
 });
 
+// password show/hide
+el("#adminPwToggle")?.addEventListener("click", (e) => {
+  const inp = el("#adminPassword");
+  const isPass = inp.type === "password";
+  inp.type = isPass ? "text" : "password";
+  e.currentTarget.setAttribute("aria-label", isPass ? "Hide password" : "Show password");
+});
+
 function loadAdminUI(){
   // Recipients
   const recs = loadRecipients();
