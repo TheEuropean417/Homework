@@ -75,37 +75,18 @@
         <section class="panel">
           <h4>SMS Rules</h4>
           <div class="grid-2">
-            <label class="field">
-              <span>Enable SMS</span>
-              <input id="smsEnable" type="checkbox">
-            </label>
-            <label class="field">
-              <span>Quiet Hours (HH:MM–HH:MM)</span>
-              <input id="smsQuiet" class="input" placeholder="21:00-07:00">
-            </label>
-            <label class="field">
-              <span>Send when <em>Due Soon</em> (hours before due)</span>
-              <input id="smsDueSoonHrs" class="input" type="number" min="0" value="24">
-            </label>
-            <label class="field">
-              <span>Send when becomes <em>Late</em></span>
-              <input id="smsOnLate" type="checkbox">
-            </label>
-            <label class="field">
-              <span>Daily Summary Time (local HH:MM)</span>
-              <input id="smsSummaryTime" class="input" placeholder="19:30">
-            </label>
-            <label class="field">
-              <span>Template for alerts</span>
-              <input id="smsAlertTemplate" class="input" placeholder="due_soon">
-            </label>
+            <label class="field"><span>Enable SMS</span><input id="smsEnable" type="checkbox"></label>
+            <label class="field"><span>Quiet Hours (HH:MM–HH:MM)</span><input id="smsQuiet" class="input" placeholder="21:00-07:00"></label>
+            <label class="field"><span>Send when <em>Due Soon</em> (hours before due)</span><input id="smsDueSoonHrs" class="input" type="number" min="0" value="24"></label>
+            <label class="field"><span>Send when becomes <em>Late</em></span><input id="smsOnLate" type="checkbox"></label>
+            <label class="field"><span>Daily Summary Time (local HH:MM)</span><input id="smsSummaryTime" class="input" placeholder="19:30"></label>
+            <label class="field"><span>Template for alerts</span><input id="smsAlertTemplate" class="input" placeholder="due_soon"></label>
           </div>
 
           <hr style="border:0;border-top:1px solid #1a2634;margin:12px 0">
           <div class="col gap">
             <h5 style="margin:0">Send Test SMS</h5>
-            <textarea id="smsTestBody" class="textarea" rows="2"
-              placeholder="Test message to send">Test: Homework notifications are configured and working.</textarea>
+            <textarea id="smsTestBody" class="textarea" rows="2" placeholder="Test message to send">Test: Homework notifications are configured and working.</textarea>
             <div class="row">
               <button id="sendTestSms" type="button" class="btn">Send Test SMS to All Recipients</button>
               <span id="sendTestSmsStatus" class="small muted" style="margin-left:8px"></span>
@@ -118,12 +99,17 @@
           <div class="grid-2">
             <label class="field"><span>Enable Telegram</span><input id="tgEnable" type="checkbox"></label>
             <label class="field"><span>Bot Token</span><input id="tgToken" class="input" placeholder="123456:ABC-DEF..."></label>
-            <label class="field"><span>Chat ID</span><input id="tgChat" class="input" placeholder="e.g., 123456789"></label>
+            <label class="field"><span>Chat ID</span><input id="tgChat" class="input" placeholder="e.g., 6406811650"></label>
           </div>
           <div class="row">
             <button id="sendTestTelegram" type="button" class="btn">Send Test Telegram</button>
             <span id="sendTestTelegramStatus" class="small muted" style="margin-left:8px"></span>
           </div>
+          <div class="row" style="margin-top:8px">
+            <button id="fetchChatIds" type="button" class="btn">Fetch Chat IDs</button>
+            <span id="fetchChatIdsStatus" class="small muted" style="margin-left:8px"></span>
+          </div>
+          <div id="chatIdsList" class="small muted" style="margin-top:6px; white-space:pre-wrap"></div>
         </section>
 
         <div class="row end">

@@ -232,7 +232,7 @@ el("#saveAdmin").addEventListener("click", ()=>{
   alert("Saved.");
 });
 
-// Test SMS sender (uses existing /api/sms)
+// Test SMS sender
 const testBtn = el("#sendTestSms");
 const testBody = el("#smsTestBody");
 const testStatus = el("#sendTestSmsStatus");
@@ -271,23 +271,19 @@ if (testBtn) {
   });
 }
 
-// Test Telegram sender
-// Test Telegram sender (reads current form fields; falls back to saved settings)
+// Test Telegram sender (reads current form values so Save isn't required first)
 const tgBtn = el("#sendTestTelegram");
 const tgStatus = el("#sendTestTelegramStatus");
-
 if (tgBtn) {
   tgBtn.addEventListener("click", async () => {
     const pwd = prompt("Admin password to send test:");
     if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
 
-    // Read live values from the form first
     const enabledNow  = document.getElementById("tgEnable")?.checked;
     const tokenNow    = document.getElementById("tgToken")?.value.trim();
     const chatNow     = document.getElementById("tgChat")?.value.trim();
+    const saved = loadTelegram() || { enabled:false, botToken:"", chatId:"" };
 
-    // Fallback to saved values if fields are empty
-    const saved = loadTelegram?.() || { enabled:false, botToken:"", chatId:"" };
     const enabled = (typeof enabledNow === "boolean") ? enabledNow : !!saved.enabled;
     const botToken = tokenNow || saved.botToken;
     const chatId   = chatNow  || saved.chatId;
@@ -297,7 +293,7 @@ if (tgBtn) {
 
     tgBtn.disabled = true; tgStatus.textContent = "Sending…";
     try {
-      const body = (document.getElementById("smsTestBody")?.value || "Test: Homework alerts are working ✅").trim();
+      const body = (testBody?.value || "Test: Homework alerts are working ✅").trim();
       const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram");
       const rsp = await fetch(url, {
         method: "POST",
@@ -307,8 +303,7 @@ if (tgBtn) {
 
       if (!rsp.ok) throw new Error(rsp.error || "Telegram send failed");
       tgStatus.textContent = `Sent ${rsp.sent} message(s)`;
-      const lines = (rsp.results||[]).map(r => r.ok ? `✅ chat ${r.chatId} (msg ${r.msgId})`
-                                                    : `❌ ${r.chatId} — ${r.error}`);
+      const lines = (rsp.results||[]).map(r => r.ok ? `✅ chat ${r.chatId} (msg ${r.msgId})` : `❌ ${r.chatId} — ${r.error}`);
       alert(lines.join("\n"));
     } catch (e) {
       tgStatus.textContent = "Failed";
@@ -319,3 +314,58 @@ if (tgBtn) {
     }
   });
 }
+
+// Fetch Chat IDs (Telegram getUpdates helper)
+const chatBtn = el("#fetchChatIds");
+const chatStatus = el("#fetchChatIdsStatus");
+const chatList = el("#chatIdsList");
+if (chatBtn) {
+  chatBtn.addEventListener("click", async () => {
+    const pwd = prompt("Admin password to fetch chat IDs:");
+    if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+
+    const tokenNow = document.getElementById("tgToken")?.value.trim();
+    const saved = loadTelegram() || { botToken:"" };
+    const botToken = tokenNow || saved.botToken;
+    if (!botToken) { alert("Enter your Bot Token first."); return; }
+
+    chatBtn.disabled = true; chatStatus.textContent = "Contacting Telegram…";
+    chatList.textContent = "";
+    try {
+      const url = CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/telegram_getupdates");
+      const rsp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ password: CONFIG.adminPassword, token: botToken })
+      }).then(r=>r.json());
+
+      if (!rsp.ok) throw new Error(rsp.error || "Could not fetch updates");
+      if (!rsp.chats?.length) {
+        chatList.textContent = "No chats found. Open Telegram, send any message to your bot, then click this again.";
+      } else {
+        const lines = rsp.chats.map(c => {
+          const label = c.type === "private"
+            ? `DM: ${c.first_name||""} ${c.last_name||""} @${c.username||""}`.trim()
+            : `${c.type.toUpperCase()}: ${c.title||"(no title)"}`;
+          return `• ${label}\n  chat_id: ${c.id}`;
+        });
+        chatList.textContent = lines.join("\n");
+      }
+      chatStatus.textContent = "Done";
+    } catch (e) {
+      chatStatus.textContent = "Failed";
+      alert(String(e.message || e));
+    } finally {
+      chatBtn.disabled = false;
+      setTimeout(()=>{ chatStatus.textContent = ""; }, 4000);
+    }
+  });
+}
+
+// First paint
+render();
+
+// Hook Sync button
+document.getElementById("syncBtn")?.addEventListener("click", () => {
+  syncFromClassroom().catch(console.error);
+});

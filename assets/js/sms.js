@@ -25,10 +25,8 @@ export async function evaluateAndMaybeSend(assignments){
   const recipients = loadRecipients();
   const now = new Date();
 
-  // Quiet hours: suppress everything (affects both Telegram and SMS)
   if(inQuietHours(settings.quiet)) return;
 
-  // Decide which assignments should trigger alerts
   const toSend = [];
   for(const a of assignments){
     if(!a.dueDateISO) continue;
@@ -37,7 +35,6 @@ export async function evaluateAndMaybeSend(assignments){
 
     if(a.status === "BYPASSED") continue;
 
-    // Due soon window
     if(ms > 0 && ms <= (settings.dueSoonHours*3600*1000)){
       const id = `dueSoon:${safeId(a)}`;
       const lastTime = last[id];
@@ -45,7 +42,6 @@ export async function evaluateAndMaybeSend(assignments){
       if(should) toSend.push({ key:id, a });
     }
 
-    // Late trigger
     if(settings.onLate && ms < 0 && a.status === "LATE"){
       const id = `becameLate:${safeId(a)}`;
       const lastTime = last[id];
