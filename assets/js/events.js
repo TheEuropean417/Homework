@@ -2,6 +2,7 @@ import { state } from "./state.js";
 import { renderTable } from "./table.js";
 import { toast } from "./ui.js";
 import { openPreviewReminders, copyAllReminders } from "./reminders.js";
+import { syncFromClassroom } from "./classroom.js";
 
 export function wireEvents() {
   ["filterStudent","filterCourse","filterStatus","filterWindow","sortSelect","searchBox"].forEach(id => {
@@ -17,11 +18,10 @@ export function wireEvents() {
     renderTable();
   });
 
-  document.getElementById("syncBtn").addEventListener("click", () => {
-    toast("Sync (wire to API later)");
-  });
+  // Classroom sync
+  document.getElementById("syncBtn").addEventListener("click", syncFromClassroom);
 
-  // NEW: open reminder preview
+  // Reminder preview
   document.getElementById("notifyBtn").addEventListener("click", openPreviewReminders);
   document.getElementById("copyAllBtn").addEventListener("click", copyAllReminders);
 
