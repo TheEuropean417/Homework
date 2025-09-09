@@ -34,7 +34,6 @@ export default async function handler(req, res){
 
     const results = [];
     for(const m of messages){
-      // Basic guard
       if(!m.to || !m.body) continue;
       /* eslint-disable no-await-in-loop */
       const rsp = await client.messages.create({ from, to: m.to, body: m.body });

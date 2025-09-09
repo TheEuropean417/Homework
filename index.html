@@ -100,6 +100,18 @@
               <input id="smsAlertTemplate" class="input" placeholder="due_soon">
             </label>
           </div>
+
+          <hr style="border:0;border-top:1px solid #1a2634;margin:12px 0">
+          <div class="col gap">
+            <h5 style="margin:0">Send Test SMS</h5>
+            <textarea id="smsTestBody" class="textarea" rows="2"
+              placeholder="Test message to send to all recipients">Test: Homework notifications are configured and working.</textarea>
+            <div class="row">
+              <button id="sendTestSms" type="button" class="btn">Send Test SMS to All Recipients</button>
+              <span id="sendTestSmsStatus" class="small muted" style="margin-left:8px"></span>
+            </div>
+          </div>
+
           <p class="muted small">Note: SMS is sent by the Vercel function <code>/api/sms</code>. Configure your Twilio env vars there.</p>
         </section>
 

@@ -1,6 +1,7 @@
 import { CONFIG } from "./config.js";
 import { syncFromClassroom } from "./classroom.js";
 import { loadBypass, saveBypass, loadRecipients, saveRecipients, loadTemplates, saveTemplates, loadSmsSettings, saveSmsSettings } from "./state.js";
+import { sendTestSmsToAll } from "./sms.js";
 
 const el = sel => document.querySelector(sel);
 const cards = el("#cards");
@@ -37,7 +38,6 @@ function shouldShow(a){
 
   if(a.status==="LATE") return showLate;
   if(a.status==="DONE"||a.status==="COMPLETED") return showDone;
-  // else treat as active/due soon/unknown
   return showDue;
 }
 
@@ -106,7 +106,6 @@ async function onBypass(a){
   const map = loadBypass();
   if(map[a.id]) delete map[a.id]; else map[a.id] = true;
   saveBypass(map);
-  // update local view
   a.status = map[a.id] ? "BYPASSED" : (a.status==="BYPASSED"?"UNKNOWN":a.status);
   render();
 }
@@ -219,5 +218,31 @@ el("#saveAdmin").addEventListener("click", ()=>{
   alert("Saved.");
 });
 
-// First paint (empty state)
+// Test SMS sender
+const testBtn = el("#sendTestSms");
+const testBody = el("#smsTestBody");
+const testStatus = el("#sendTestSmsStatus");
+
+if (testBtn) {
+  testBtn.addEventListener("click", async () => {
+    const pwd = prompt("Admin password to send test SMS:");
+    if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+
+    testBtn.disabled = true; testStatus.textContent = "Sending…";
+    try {
+      const body = (testBody?.value || "Test message").trim();
+      const rsp = await sendTestSmsToAll(body);
+      testStatus.textContent = `Sent ${rsp?.sent ?? 0} message(s)`;
+    } catch (e) {
+      console.error(e);
+      testStatus.textContent = "Failed to send test";
+      alert(String(e.message || e));
+    } finally {
+      testBtn.disabled = false;
+      setTimeout(()=>{ testStatus.textContent = ""; }, 4000);
+    }
+  });
+}
+
+// First paint
 render();

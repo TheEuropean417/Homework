@@ -25,9 +25,7 @@ export async function syncFromClassroom(){
   loadingEl.classList.add("hidden");
   if(!data){ console.error("Classroom fetch failed:", err); throw err; }
 
-  // normalize → array of assignments
-  // Expected shape: [{ id, title, course, dueDateISO, status, notes }]
-  // Your API already returns a list; keep it simple and pass through.
+  // Normalize to cards
   const bypassMap = loadBypass();
   const list = (data.assignments || data || []).map(a => {
     const id = a.id ?? `${a.title}-${a.dueDateISO ?? ""}`;
@@ -35,16 +33,14 @@ export async function syncFromClassroom(){
     return { id, title:a.title||"Untitled", course:a.course||"", dueDateISO:a.dueDateISO||null, notes:a.notes||"", status };
   });
 
-  // SMS logic (auto, rules-driven)
+  // Auto SMS evaluation
   try { await evaluateAndMaybeSend(list); } catch(e){ console.warn("SMS rule eval/send failed:", e); }
 
-  // Emit event for UI renderer
   document.dispatchEvent(new CustomEvent("assignments:loaded", { detail: list }));
 }
 
 document.getElementById("syncBtn")?.addEventListener("click", syncFromClassroom);
 
-// Auto-sync if enabled
 if (CONFIG.autoSyncOnLoad) {
   window.addEventListener("load", () => {
     setTimeout(() => syncFromClassroom().catch(console.error), 50);
