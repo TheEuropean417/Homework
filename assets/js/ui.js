@@ -218,7 +218,7 @@ el("#saveAdmin").addEventListener("click", ()=>{
   alert("Saved.");
 });
 
-// Test SMS sender
+// Test SMS sender (replace the previous block)
 const testBtn = el("#sendTestSms");
 const testBody = el("#smsTestBody");
 const testStatus = el("#sendTestSmsStatus");
@@ -231,18 +231,24 @@ if (testBtn) {
     testBtn.disabled = true; testStatus.textContent = "Sending…";
     try {
       const body = (testBody?.value || "Test message").trim();
-      const rsp = await sendTestSmsToAll(body);
-      testStatus.textContent = `Sent ${rsp?.sent ?? 0} message(s)`;
+      const rsp = await (await fetch(CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/sms"),{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ password: CONFIG.adminPassword, messages: (await import("./state.js")).then(m=>m.loadRecipients()).then(rs=>rs.map(r=>({ to: r.phone, body }))) })
+      })).json();
+
+      if (!rsp.ok) throw new Error(rsp.error || "Unknown SMS error");
+
+      const lines = (rsp.results || []).map(r => r.ok ? `✅ ${r.to} via ${r.via || "sms"} (id: ${r.messageId})` : `❌ ${r.to} — ${r.error}`);
+      testStatus.textContent = `Sent ${rsp.sent} / ${(rsp.results||[]).length}`;
+      alert(lines.join("\n") || `Sent ${rsp.sent}`);
     } catch (e) {
       console.error(e);
       testStatus.textContent = "Failed to send test";
       alert(String(e.message || e));
     } finally {
       testBtn.disabled = false;
-      setTimeout(()=>{ testStatus.textContent = ""; }, 4000);
+      setTimeout(()=>{ testStatus.textContent = ""; }, 5000);
     }
   });
 }
-
-// First paint
-render();
