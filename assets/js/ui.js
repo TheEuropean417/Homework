@@ -1,21 +1,19 @@
-// assets/js/ui.js — COMPLETE (fixed imports for notify settings)
+// assets/js/ui.js — COMPLETE
 
-// ------------------------ Imports ------------------------
 import { CONFIG } from "./config.js";
 import { syncFromClassroom } from "./classroom.js";
 import {
   loadRecipients, saveRecipients,
   loadTemplates,  saveTemplates,
-  loadNotifySettings, saveNotifySettings,   // ✅ correct names from state.js
+  loadNotifySettings, saveNotifySettings,
   loadBypass,     saveBypass
 } from "./state.js";
+import { state } from "./state.js";
 import { sendEmailsToConfiguredRecipients } from "./email.js";
 
-// ------------------------ DOM helpers ------------------------
 const el  = (s, r=document) => r.querySelector(s);
 const els = (s, r=document) => Array.from(r.querySelectorAll(s));
 
-// ------------------------ Toast ------------------------
 export function toast(msg) {
   const t = el("#toast");
   const m = el("#toastMsg");
@@ -25,16 +23,13 @@ export function toast(msg) {
   setTimeout(() => t.classList.remove("show"), 1800);
 }
 
-// ------------------------ Global-ish view state ------------------------
 const cards   = el("#cards");
 const loading = el("#loading");
 const empty   = el("#empty");
 
-let assignments = []; // normalized: {id,title,course,notes,status,dueDateISO}
+let assignments = []; // normalized list ready to render
 
-// ------------------------ Utilities ------------------------
 function fmtDate(iso){ try{ return iso ? new Date(iso).toLocaleString() : "—"; }catch{ return "—"; } }
-
 function statusClass(s){
   if(s==="LATE") return "late";
   if(s==="DONE"||s==="COMPLETED") return "done";
@@ -43,7 +38,6 @@ function statusClass(s){
   if(s==="DUE_TOMORROW") return "tomorrow";
   return "up";
 }
-
 function matchesSearch(a, q){
   if(!q) return true;
   q = q.toLowerCase();
@@ -52,28 +46,23 @@ function matchesSearch(a, q){
           a.notes?.toLowerCase().includes(q) ||
           a.status?.toLowerCase().includes(q));
 }
-
 function shouldShow(a){
-  const q       = el("#searchInput")?.value.trim();
+  const q       = el("#searchInput")?.value?.trim();
   const showLate= el("#toggleLate")?.checked ?? true;
   const showDue = el("#toggleDueSoon")?.checked ?? true;
   const showDone= el("#toggleCompleted")?.checked ?? false;
   const showByp = el("#toggleBypassed")?.checked ?? false;
-
   if(!matchesSearch(a,q)) return false;
   if(a.status==="BYPASSED" && !q && !showByp) return false;
-
-  if(a.status==="LATE")                       return showLate;
+  if(a.status==="LATE") return showLate;
   if(a.status==="DONE" || a.status==="COMPLETED") return showDone;
-  return showDue; // everything else = active/due
+  return showDue;
 }
 
-// ------------------------ Rendering ------------------------
 function render() {
   if (!cards) return;
   cards.innerHTML = "";
   let shown = 0;
-
   const bypassMap = loadBypass() || {};
 
   for(const a of assignments){
@@ -83,7 +72,6 @@ function render() {
     const c = document.createElement("div");
     c.className = "card";
 
-    // Head
     const head = document.createElement("div");
     head.className = "card-head";
     head.innerHTML = `
@@ -92,17 +80,15 @@ function render() {
         ${a.title || "Untitled"}
       </div>
       <div class="badges">
-        <span class="badge ${statusClass(a.status)}">${a.status?.replace("_"," ") || "UNKNOWN"}</span>
+        <span class="badge ${statusClass(a.status)}">${(a.status||"UNKNOWN").replace("_"," ")}</span>
       </div>`;
     c.appendChild(head);
 
-    // Meta
     const meta = document.createElement("div");
     meta.className = "meta";
     meta.innerText = `${a.course || "—"} · Due: ${fmtDate(a.dueDateISO)}`;
     c.appendChild(meta);
 
-    // Notes
     if(a.notes){
       const notes = document.createElement("div");
       notes.className = "small";
@@ -110,7 +96,6 @@ function render() {
       c.appendChild(notes);
     }
 
-    // Footer actions
     const foot = document.createElement("div");
     foot.className = "card-foot";
 
@@ -127,8 +112,7 @@ function render() {
     btnByp.textContent = bypassMap[a.id] ? "Unbypass" : "Bypass";
     btnByp.addEventListener("click", () => {
       const map = loadBypass() || {};
-      if (map[a.id]) delete map[a.id];
-      else map[a.id] = true;
+      if (map[a.id]) delete map[a.id]; else map[a.id] = true;
       saveBypass(map);
       render();
       toast(map[a.id] ? "Bypassed" : "Unbypassed");
@@ -144,7 +128,7 @@ function render() {
   if (empty) empty.style.display = shown ? "none" : "block";
 }
 
-// ------------------------ Filters & controls ------------------------
+/* === Filters & controls === */
 function wireFilters(){
   el("#searchInput")?.addEventListener("input", () => render());
   ["#toggleLate","#toggleDueSoon","#toggleCompleted","#toggleBypassed"].forEach(s=>{
@@ -152,7 +136,7 @@ function wireFilters(){
   });
 }
 
-// ------------------------ Sync button ------------------------
+/* === Sync === */
 function wireSync(){
   const btn = el("#syncBtn");
   if(!btn) return;
@@ -160,12 +144,7 @@ function wireSync(){
     try{
       loading && (loading.style.display = "block");
       btn.disabled = true;
-      const res = await syncFromClassroom(); // expected to populate data / return list
-      if (Array.isArray(res?.assignments)) {
-        assignments = res.assignments;
-      }
-      render();
-      toast("Classroom sync complete");
+      await syncFromClassroom(); // dispatches "assignments:loaded" on success 
     }catch(e){
       console.error(e);
       toast("Sync failed");
@@ -177,7 +156,15 @@ function wireSync(){
   });
 }
 
-// ------------------------ Admin Modal (gate + UI) ------------------------
+/* === Listen for loader event and render === */
+document.addEventListener("assignments:loaded", (e) => {
+  // e.detail is the normalized list from classroom.js
+  assignments = Array.isArray(e.detail) ? e.detail : (state?.assignments || []);
+  console.log("[UI] assignments loaded:", assignments.length);
+  render();
+}); /* loader dispatches this event */  /*  */
+
+/* === Admin Modal (gate + UI) === */
 function wireAdminModal(){
   const modal = el("#adminModal");
   if(!modal) return;
@@ -189,7 +176,6 @@ function wireAdminModal(){
   openBtn?.addEventListener("click", ()=> modal.showModal());
   closeBtn?.addEventListener("click", ()=> modal.close());
 
-  // password show/hide
   el("#adminPwToggle")?.addEventListener("click", (e) => {
     const inp = el("#adminPassword");
     if(!inp) return;
@@ -213,7 +199,7 @@ function wireAdminModal(){
   });
 }
 
-// ------------------------ Admin: Recipients panel ------------------------
+/* === Admin: Recipients === */
 function buildRecipientsPanel(){
   const tbody = el("#recipientsBody");
   if(!tbody) return;
@@ -228,10 +214,7 @@ function buildRecipientsPanel(){
       <div>${r.name || "—"}</div>
       <div>${r.email || "—"}</div>
       <div>${r.telegram_chat_id || r.chatId || "—"}</div>
-      <div class="right">
-        <button class="btn remove">Remove</button>
-      </div>
-    `;
+      <div class="right"><button class="btn remove">Remove</button></div>`;
     row.querySelector(".remove")?.addEventListener("click", ()=>{
       const next = (loadRecipients() || []).filter(x =>
         !(x.name===r.name && x.email===r.email && (x.telegram_chat_id||x.chatId)===(r.telegram_chat_id||r.chatId))
@@ -243,7 +226,6 @@ function buildRecipientsPanel(){
     tbody.appendChild(row);
   }
 
-  // Add form
   el("#recipientAddBtn")?.addEventListener("click", ()=>{
     const name  = el("#recName")?.value?.trim();
     const email = el("#recEmail")?.value?.trim();
@@ -258,7 +240,7 @@ function buildRecipientsPanel(){
   });
 }
 
-// ------------------------ Admin: Templates panel ------------------------
+/* === Admin: Templates === */
 function buildTemplatesPanel(){
   const keyInput   = el("#tplKey");
   const subjInput  = el("#tplSubj");
@@ -299,10 +281,9 @@ function buildTemplatesPanel(){
   loadCurrent();
 }
 
-// ------------------------ Admin: Notification rules panel ------------------------
+/* === Admin: Notification rules === */
 function buildRulesPanel(){
-  // uses notifySettings from state.js (not sms-only) :contentReference[oaicite:1]{index=1}
-  const s = loadNotifySettings();
+  const s = loadNotifySettings(); // correct export from state.js 
   const qh   = el("#ruleQuietHours");
   const soon = el("#ruleDueSoonHours");
   const late = el("#ruleNotifyLate");
@@ -328,15 +309,13 @@ function buildRulesPanel(){
   });
 
   reset?.addEventListener("click", ()=>{
-    saveNotifySettings({
-      quiet:"21:00-07:00", dueSoonHours:24, onLate:true, summaryTime:"19:30", alertTemplate:"due_soon"
-    });
+    saveNotifySettings({ quiet:"21:00-07:00", dueSoonHours:24, onLate:true, summaryTime:"19:30", alertTemplate:"due_soon" });
     buildRulesPanel();
     toast("Rules reset");
   });
 }
 
-// ------------------------ Admin: Bypass viewer ------------------------
+/* === Admin: Bypass viewer === */
 function buildBypassList(){
   const list = el("#bypassList");
   if(!list) return;
@@ -365,7 +344,7 @@ function buildBypassList(){
   }
 }
 
-// ------------------------ Admin: Email test wiring ------------------------
+/* === Admin: Email test === */
 function wireEmailTest(){
   const emailBtn    = el("#sendTestEmail");
   const emailBody   = el("#emailTestBody");
@@ -399,7 +378,6 @@ function wireEmailTest(){
   });
 }
 
-// ------------------------ Admin UI boot ------------------------
 function loadAdminUI(){
   buildRecipientsPanel();
   buildTemplatesPanel();
@@ -407,12 +385,10 @@ function loadAdminUI(){
   wireEmailTest();
 }
 
-// ------------------------ Boot ------------------------
 function boot(){
   wireFilters();
   wireSync();
   wireAdminModal();
-
   if (CONFIG.autoSyncOnLoad) el("#syncBtn")?.click();
 }
 

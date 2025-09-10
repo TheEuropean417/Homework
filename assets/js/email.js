@@ -15,11 +15,11 @@ export async function sendEmailsToConfiguredRecipients({ subject, text, html }) 
     }))
   };
 
-  const res = await fetch(CONFIG.emailEndpoint || CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/email"), {
+  const url = CONFIG.emailEndpoint || CONFIG.classroomEndpoints[0].replace("/api/classroom","/api/email");
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
-    // credentials not needed; keep CORS simple.
   });
   if (!res.ok) throw new Error(`Email API ${res.status}: ${await res.text().catch(()=>res.statusText)}`);
   return res.json();
