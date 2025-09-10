@@ -424,26 +424,3 @@ function wireFilters(){
     });
   });
 }
-
-function wireAdminModal(){
-  const modal = el("#adminModal");
-  if(!modal) return;
-
-  el("#adminBtn")?.addEventListener("click", ()=>modal.showModal());
-  el("#adminClose")?.addEventListener("click", ()=>modal.close());
-
-  el("#adminPwToggle")?.addEventListener("click", (ev)=>{
-    const inp = el("#adminPassword"); if(!inp) return;
-    const isPass = inp.type === "password"; inp.type = isPass ? "text" : "password";
-    ev.currentTarget.setAttribute("aria-label", isPass ? "Hide password":"Show password");
-  });
-
-  el("#adminUnlock")?.addEventListener("click", ()=>{
-    const ok = (el("#adminPassword")?.value?.trim() === CONFIG.adminPassword);
-    if (!ok){ el("#adminErr")?.classList.remove("hidden"); return; }
-    el("#adminErr")?.classList.add("hidden");
-    el("#adminGate")?.classList.add("hidden");
-    el("#adminBody")?.classList.remove("hidden");
-    loadAdminUI(); buildBypassList();
-  });
-}
