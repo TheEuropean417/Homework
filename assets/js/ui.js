@@ -425,25 +425,6 @@ function wireFilters(){
   });
 }
 
-function wireSync(){
-  const btn = el("#syncBtn");
-  if(!btn) return;
-  btn.addEventListener("click", async ()=>{
-    try{
-      loading && (loading.style.display = "block");
-      btn.disabled = true;
-      await syncFromClassroom();   // classroom.js will dispatch "assignments:loaded"
-    }catch(err){
-      console.error(err);
-      toast("Sync failed");
-      alert(String(err?.message||err));
-    }finally{
-      btn.disabled = false;
-      loading && (loading.style.display = "none");
-    }
-  });
-}
-
 function wireAdminModal(){
   const modal = el("#adminModal");
   if(!modal) return;
