@@ -1,4 +1,4 @@
-// assets/js/ui.js — COMPLETE
+// assets/js/ui.js — COMPLETE (date-driven status, counters, sorting, admin, email)
 
 // ------------------------ Imports ------------------------
 import { CONFIG } from "./config.js";
@@ -65,7 +65,7 @@ const weight = (s)=>{
   return (s in order) ? order[s] : 9;
 };
 
-// derive SUBMITTED / RETURNED when provider sends submissionState
+// submission labels from provider
 const submissionLabel = (a)=>{
   switch ((a.submissionState||"").toUpperCase()){
     case "TURNED_IN": return "SUBMITTED";
@@ -74,21 +74,20 @@ const submissionLabel = (a)=>{
   }
 };
 
-// strict urgency classification
-function classify(base){
-  // Respect explicit status if present
-  const explicit = (base.status||"").toUpperCase();
-  if (["SUBMITTED","RETURNED","DONE","COMPLETED","BYPASSED","LATE","DUE_TODAY","DUE_TOMORROW","UPCOMING","DUE"].includes(explicit)){
-    return explicit === "DUE" ? "UPCOMING" : explicit;
-  }
+// STRICT date-based classifier (ignores feed-provided status)
+// Only honors BYPASSED (via map) and SUBMITTED/RETURNED (from submissionState).
+function classifyFromDate(base, bypassMap){
+  if (bypassMap[base.id]) return "BYPASSED";
+
+  const sub = submissionLabel(base);
+  if (sub) return sub;
 
   const iso = base.dueDateISO;
   const due = iso ? new Date(iso) : null;
   const now = new Date();
 
-  if (base.late === true) return "LATE";
-  if (!due) return "UPCOMING";
-  if (due < now) return "LATE";
+  if (!due) return "UPCOMING";                // no due date → treat as upcoming
+  if (due < now) return "LATE";               // past due → late
 
   const today    = startOfDay(now);
   const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
@@ -102,15 +101,13 @@ function classify(base){
 function recomputeSummary(list){
   let kLate=0,kToday=0,kTom=0,kUp=0,kSub=0,kRet=0;
   for (const a of list) {
-    const sub = submissionLabel(a);
-    if (sub === "SUBMITTED") kSub++;
-    if (sub === "RETURNED")  kRet++;
+    if (a.status === "SUBMITTED") kSub++;
+    if (a.status === "RETURNED")  kRet++;
     switch (a.status) {
       case "LATE":        kLate++;   break;
       case "DUE_TODAY":   kToday++;  break;
       case "DUE_TOMORROW":kTom++;    break;
       case "UPCOMING":    kUp++;     break;
-      default: break;
     }
   }
   const set = (sel, v) => { const n = document.querySelector(sel); if (n) n.textContent = String(v); };
@@ -193,13 +190,14 @@ function render(){
       if(pwd !== CONFIG.adminPassword){ alert("Incorrect password."); return; }
 
       const map = loadBypass() || {};
-      if (map[a.id]) { delete map[a.id]; a.status = classify(a._base); }
-      else { map[a.id] = true; a.status = "BYPASSED"; }
+      if (map[a.id]) { delete map[a.id]; } else { map[a.id] = true; }
       saveBypass(map);
 
-      // Recompute decorations and counters then re-render
+      // Re-classify THIS item based on current date/bypass, then refresh counters/UI
+      a.status  = classifyFromDate(a._base, map);
       a._label  = displayLabel(a.status);
       a._weight = weight(a.status);
+
       recomputeSummary(assignments);
       syncCountersFromFilters();
       render();
@@ -217,7 +215,7 @@ document.addEventListener("assignments:loaded", (e)=>{
   const raw = Array.isArray(e.detail) ? e.detail : [];
   const bypassMap = loadBypass() || {};
 
-  // normalize → classify → decorate
+  // normalize → classify STRICTLY by date (ignores feed status)
   assignments = raw.map(r => {
     const base = {
       id: String(r.id ?? `${r.title}-${r.dueDateISO??""}-${Math.random().toString(36).slice(2)}`),
@@ -225,16 +223,11 @@ document.addEventListener("assignments:loaded", (e)=>{
       course: r.course || r.courseName || r.courseTitle || "",
       notes: r.description || r.notes || "",
       dueDateISO: toISO(r.dueDateISO || r.due || r.dueDate),
-      status: (r.status || "").toUpperCase(),
-      late: !!r.late,
+      // Keep submission state for SUBMITTED/RETURNED
       submissionState: r.submissionState || r.submission_state
     };
 
-    // prefer SUBMITTED/RETURNED labels when present
-    const sub = submissionLabel(base);
-    let cls = sub || classify(base);
-    if (bypassMap[base.id]) cls = "BYPASSED";
-
+    const cls = classifyFromDate(base, bypassMap);
     return {
       ...base,
       _base:   base,                          // keep original for re-class after unbypass
@@ -397,7 +390,7 @@ function buildBypassList(){
     row.querySelector(".unb")?.addEventListener("click", ()=>{
       const m = loadBypass() || {}; delete m[id]; saveBypass(m);
       const x = assignments.find(a=>a.id===id);
-      if(x){ x.status = classify(x._base); x._label = displayLabel(x.status); x._weight = weight(x.status); }
+      if(x){ x.status = classifyFromDate(x._base, m); x._label = displayLabel(x.status); x._weight = weight(x.status); }
       recomputeSummary(assignments); render();
     });
     list.appendChild(row);
@@ -422,17 +415,62 @@ function wireEmailTest(){
 function loadAdminUI(){ buildRecipientsPanel(); buildTemplatesPanel(); buildRulesPanel(); wireEmailTest(); }
 
 // ------------------------ Boot ------------------------
+function wireFilters(){
+  const controls = ["#searchInput","#fLate","#fToday","#fTomorrow",
+                    "#fUpcoming","#fBypassed","#fSubmitted","#fReturned"];
+  controls.forEach(sel=>{
+    const evt = sel === "#searchInput" ? "input" : "change";
+    el(sel)?.addEventListener(evt, ()=>{
+      recomputeSummary(assignments);
+      syncCountersFromFilters();
+      render();
+    });
+  });
+}
+function wireSync(){
+  const btn = el("#syncBtn");
+  if(!btn) return;
+  btn.addEventListener("click", async ()=>{
+    try{
+      loading && (loading.style.display = "block");
+      btn.disabled = true;
+      await syncFromClassroom();   // classroom.js will dispatch "assignments:loaded"
+    }catch(err){
+      console.error(err);
+      toast("Sync failed");
+      alert(String(err?.message||err));
+    }finally{
+      btn.disabled = false;
+      loading && (loading.style.display = "none");
+    }
+  });
+}
+function wireAdminModal(){
+  const modal = el("#adminModal");
+  if(!modal) return;
+
+  el("#adminBtn")?.addEventListener("click", ()=>modal.showModal());
+  el("#adminClose")?.addEventListener("click", ()=>modal.close());
+
+  el("#adminPwToggle")?.addEventListener("click", (ev)=>{
+    const inp = el("#adminPassword"); if(!inp) return;
+    const isPass = inp.type === "password"; inp.type = isPass ? "text" : "password";
+    ev.currentTarget.setAttribute("aria-label", isPass ? "Hide password":"Show password");
+  });
+
+  el("#adminUnlock")?.addEventListener("click", ()=>{
+    const ok = (el("#adminPassword")?.value?.trim() === CONFIG.adminPassword);
+    if (!ok){ el("#adminErr")?.classList.remove("hidden"); return; }
+    el("#adminErr")?.classList.add("hidden");
+    el("#adminGate")?.classList.add("hidden");
+    el("#adminBody")?.classList.remove("hidden");
+    loadAdminUI(); buildBypassList();
+  });
+}
 function boot(){
-  // Filters
   wireFilters();
-
-  // Sync button
   wireSync();
-
-  // Admin modal
   wireAdminModal();
-
-  // Auto-sync if configured
   if (CONFIG.autoSyncOnLoad) {
     setTimeout(() => el("#syncBtn")?.click(), 50);
   }
