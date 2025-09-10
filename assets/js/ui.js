@@ -42,7 +42,7 @@ const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
 const sameDay = (a,b)=> a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
 
 // UI wording on the pill
-const displayLabel = (status) => (status === "UPCOMING") ? "DUE" : status.replaceAll("_"," ");
+const displayLabel = (status) => (status === "UPCOMING") ? "UPCOMING" : status.replaceAll("_"," ");
 
 // map status → CSS class
 const statusClass = (s)=>{
