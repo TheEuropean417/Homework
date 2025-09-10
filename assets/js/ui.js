@@ -1,15 +1,10 @@
-// assets/js/ui.js — COMPLETE (date-driven status, counters, sorting, admin, email)
+// assets/js/ui.js — main app (status/counters/render/sync); admin is in admin.js
 
 // ------------------------ Imports ------------------------
 import { CONFIG } from "./config.js";
 import { syncFromClassroom } from "./classroom.js";
-import {
-  loadRecipients, saveRecipients,
-  loadTemplates,  saveTemplates,
-  loadNotifySettings, saveNotifySettings,
-  loadBypass,     saveBypass
-} from "./state.js";
-import { sendEmailsToConfiguredRecipients } from "./email.js";
+import { loadBypass } from "./state.js";
+import { wireAdmin, ensureTelegramDefaults } from "./admin.js";
 
 // ------------------------ DOM helpers & Toast ------------------------
 const el = (s, r=document) => r.querySelector(s);
@@ -23,7 +18,7 @@ export function toast(msg){
 }
 
 // ------------------------ View State ------------------------
-let assignments = []; // normalized & classified items used for rendering
+let assignments = []; // normalized & classified
 const cards   = el("#cards");
 const loading = el("#loading");
 const empty   = el("#empty");
@@ -41,57 +36,31 @@ const fmtDate = (iso)=> { try{ return iso ? new Date(iso).toLocaleString() : "�
 const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
 const sameDay = (a,b)=> a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
 
-// UI wording on the pill
 const displayLabel = (status) => (status === "UPCOMING") ? "UPCOMING" : status.replaceAll("_"," ");
+const statusClass  = (s)=> s==="BYPASSED" ? "byp"
+  : s==="LATE" ? "late"
+  : s==="DUE_TODAY" ? "today"
+  : s==="DUE_TOMORROW" ? "tomorrow"
+  : (s==="DONE"||s==="COMPLETED") ? "done"
+  : s==="SUBMITTED" ? "sub"
+  : s==="RETURNED"  ? "ret" : "up";
 
-// map status → CSS class
-const statusClass = (s)=>{
-  if(s==="BYPASSED")     return "byp";
-  if(s==="LATE")         return "late";
-  if(s==="DUE_TODAY")    return "today";
-  if(s==="DUE_TOMORROW") return "tomorrow";
-  if(s==="DONE"||s==="COMPLETED") return "done";
-  if(s==="SUBMITTED")    return "sub";
-  if(s==="RETURNED")     return "ret";
-  return "up"; // UPCOMING → green
-};
-
-// sort order for groups
-const weight = (s)=>{
-  const order = {
-    "LATE":0, "DUE_TODAY":1, "DUE_TOMORROW":2, "UPCOMING":3,
-    "SUBMITTED":4, "RETURNED":5, "DONE":6, "COMPLETED":6, "BYPASSED":7
-  };
-  return (s in order) ? order[s] : 9;
-};
-
-// submission labels from provider
-const submissionLabel = (a)=>{
+const weight = (s)=>({LATE:0,DUE_TODAY:1,DUE_TOMORROW:2,UPCOMING:3,SUBMITTED:4,RETURNED:5,DONE:6,COMPLETED:6,BYPASSED:7}[s] ?? 9);
+const submissionLabel = (a)=> {
   switch ((a.submissionState||"").toUpperCase()){
     case "TURNED_IN": return "SUBMITTED";
     case "RETURNED":  return "RETURNED";
     default: return null;
   }
 };
-
-// STRICT date-based classifier (ignore feed status; honor BYPASSED + SUBMITTED/RETURNED)
 function classifyFromDate(base, bypassMap){
   if (bypassMap[base.id]) return "BYPASSED";
-
-  const sub = submissionLabel(base);
-  if (sub) return sub;
-
-  const iso = base.dueDateISO;
-  const due = iso ? new Date(iso) : null;
-  const now = new Date();
-
+  const sub = submissionLabel(base); if (sub) return sub;
+  const iso = base.dueDateISO, due = iso ? new Date(iso) : null, now = new Date();
   if (!due) return "UPCOMING";
   if (due < now) return "LATE";
-
-  const today    = startOfDay(now);
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-
-  if (sameDay(due, today))    return "DUE_TODAY";
+  const today = startOfDay(now), tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+  if (sameDay(due, today)) return "DUE_TODAY";
   if (sameDay(due, tomorrow)) return "DUE_TOMORROW";
   return "UPCOMING";
 }
@@ -99,21 +68,17 @@ function classifyFromDate(base, bypassMap){
 // ------------------------ Counters (status bar) ------------------------
 function recomputeSummary(list){
   let kLate=0,kToday=0,kTom=0,kUp=0,kSub=0,kRet=0;
-  for (const a of list) {
-    if (a.status === "SUBMITTED") kSub++;
-    if (a.status === "RETURNED")  kRet++;
-    switch (a.status) {
-      case "LATE":        kLate++;   break;
-      case "DUE_TODAY":   kToday++;  break;
-      case "DUE_TOMORROW":kTom++;    break;
-      case "UPCOMING":    kUp++;     break;
-    }
+  for (const a of list){
+    if (a.status==="SUBMITTED") kSub++;
+    if (a.status==="RETURNED")  kRet++;
+    if (a.status==="LATE") kLate++;
+    else if (a.status==="DUE_TODAY") kToday++;
+    else if (a.status==="DUE_TOMORROW") kTom++;
+    else if (a.status==="UPCOMING") kUp++;
   }
   const set = (sel, v) => { const n = document.querySelector(sel); if (n) n.textContent = String(v); };
   set("#kLate", kLate); set("#kToday", kToday); set("#kTom", kTom); set("#kUp", kUp); set("#kSub", kSub); set("#kRet", kRet);
 }
-
-// visually dim the tiles based on filters (if present)
 function syncCountersFromFilters(){
   const map = {Late:"#fLate",Today:"#fToday",Tomorrow:"#fTomorrow",Upcoming:"#fUpcoming",Submitted:"#fSubmitted",Returned:"#fReturned"};
   for (const [key, sel] of Object.entries(map)){
@@ -145,7 +110,7 @@ function shouldShow(a){
   if (a.status === "LATE")         return fLate;
   if (a.status === "DUE_TODAY")    return fToday;
   if (a.status === "DUE_TOMORROW") return fTomorrow;
-  return fUpcoming; // UPCOMING & everything else
+  return fUpcoming;
 }
 
 // ------------------------ Rendering ------------------------
@@ -153,10 +118,9 @@ function render(){
   if (!cards) return;
   cards.innerHTML = "";
 
-  // Sort (group weight, then due time, then title)
   const sorted = [...assignments].sort((a,b)=> (a._weight - b._weight) || (a._dueMs - b._dueMs) || a.title.localeCompare(b.title));
-
   let shown = 0;
+
   for (const a of sorted){
     if (!shouldShow(a)) continue;
     shown++;
@@ -166,8 +130,7 @@ function render(){
     card.innerHTML = `
       <div class="card-head">
         <div class="title">
-          <span class="dot ${statusClass(a.status)}"></span>
-          ${a.title || "Untitled"}
+          <span class="dot ${statusClass(a.status)}"></span>${a.title || "Untitled"}
         </div>
         <div class="badges">
           <span class="badge ${statusClass(a.status)}">${displayLabel(a.status)}</span>
@@ -183,24 +146,16 @@ function render(){
       </div>
     `;
 
-    // Bypass toggle
     card.querySelector(".byp")?.addEventListener("click", ()=>{
       const pwd = prompt("Admin password to toggle bypass:");
       if(pwd !== CONFIG.adminPassword){ alert("Incorrect password."); return; }
-
       const map = loadBypass() || {};
-      if (map[a.id]) { delete map[a.id]; } else { map[a.id] = true; }
-      saveBypass(map);
-
-      // Re-classify based on current date/bypass, then refresh counters/UI
+      if (map[a.id]) delete map[a.id]; else map[a.id] = true;
+      localStorage.setItem("bypassMap", JSON.stringify(map)); // state.js uses localStorage under the hood
       a.status  = classifyFromDate(a._base, map);
       a._label  = displayLabel(a.status);
       a._weight = weight(a.status);
-
-      recomputeSummary(assignments);
-      syncCountersFromFilters();
-      render();
-      toast(a.status==="BYPASSED" ? "Bypassed" : "Unbypassed");
+      recomputeSummary(assignments); syncCountersFromFilters(); render();
     });
 
     cards.appendChild(card);
@@ -214,7 +169,6 @@ document.addEventListener("assignments:loaded", (e)=>{
   const raw = Array.isArray(e.detail) ? e.detail : [];
   const bypassMap = loadBypass() || {};
 
-  // normalize → classify STRICTLY by date (ignore feed status)
   assignments = raw.map(r => {
     const base = {
       id: String(r.id ?? `${r.title}-${r.dueDateISO??""}-${Math.random().toString(36).slice(2)}`),
@@ -224,7 +178,6 @@ document.addEventListener("assignments:loaded", (e)=>{
       dueDateISO: toISO(r.dueDateISO || r.due || r.dueDate),
       submissionState: r.submissionState || r.submission_state
     };
-
     const cls = classifyFromDate(base, bypassMap);
     return {
       ...base,
@@ -236,191 +189,36 @@ document.addEventListener("assignments:loaded", (e)=>{
     };
   });
 
-  recomputeSummary(assignments);
-  syncCountersFromFilters();
-  render();
+  recomputeSummary(assignments); syncCountersFromFilters(); render();
 });
 
-function wireSync(){
-  const btn = el("#syncBtn");
-  if(!btn) return;
-  btn.addEventListener("click", async ()=>{
-    try{
-      loading && (loading.style.display = "block");
-      btn.disabled = true;
-      await syncFromClassroom();   // classroom.js will dispatch "assignments:loaded"
-    }catch(err){
-      console.error(err);
-      toast("Sync failed");
-      alert(String(err?.message||err));
-    }finally{
-      btn.disabled = false;
-      loading && (loading.style.display = "none");
-    }
-  });
-}
-
-function wireAdminModal(){
-  const modal = el("#adminModal");
-  if(!modal) return;
-
-  el("#adminBtn")?.addEventListener("click", ()=>modal.showModal());
-  el("#adminClose")?.addEventListener("click", ()=>modal.close());
-
-  el("#adminPwToggle")?.addEventListener("click", (ev)=>{
-    const inp = el("#adminPassword"); if(!inp) return;
-    const isPass = inp.type === "password"; inp.type = isPass ? "text" : "password";
-    ev.currentTarget.setAttribute("aria-label", isPass ? "Hide password":"Show password");
-  });
-
-  el("#adminUnlock")?.addEventListener("click", ()=>{
-    const ok = (el("#adminPassword")?.value?.trim() === CONFIG.adminPassword);
-    if (!ok){ el("#adminErr")?.classList.remove("hidden"); return; }
-    el("#adminErr")?.classList.add("hidden");
-    el("#adminGate")?.classList.add("hidden");
-    el("#adminBody")?.classList.remove("hidden");
-    loadAdminUI(); buildBypassList();
-  });
-}
-
-// ---- Admin panels ----
-function buildRecipientsPanel(){
-  const list = el("#recipientsList"); if(!list) return;
-  const data = loadRecipients() || [];
-  list.innerHTML = "";
-  data.forEach(r=>{
-    const row = document.createElement("div");
-    row.className = "item";
-    row.innerHTML = `<div>${r.name||"—"}</div>
-                     <div>${r.email||"—"}</div>
-                     <div>${r.telegram_chat_id||r.chatId||"—"}</div>
-                     <div><button class="btn rm">Remove</button></div>`;
-    row.querySelector(".rm")?.addEventListener("click", ()=>{
-      const next = (loadRecipients()||[]).filter(x =>
-        !(x.name===r.name && x.email===r.email && (x.telegram_chat_id||x.chatId)===(r.telegram_chat_id||r.chatId))
-      );
-      saveRecipients(next); buildRecipientsPanel(); toast("Recipient removed");
-    });
-    list.appendChild(row);
-  });
-
-  el("#addRecipient")?.addEventListener("click", ()=>{
-    const name  = el("#recName")?.value?.trim();
-    const email = el("#recEmail")?.value?.trim();
-    const chat  = el("#recChatId")?.value?.trim();
-    if(!name && !email && !chat){ alert("Enter at least a name and an email or telegram chat_id."); return; }
-    const next = loadRecipients() || []; next.push({ name, email, telegram_chat_id: chat });
-    saveRecipients(next);
-    el("#recName").value = ""; el("#recEmail").value = ""; el("#recChatId").value = "";
-    buildRecipientsPanel(); toast("Recipient added");
-  });
-}
-
-function buildTemplatesPanel(){
-  const list = el("#templatesList"); if(!list) return;
-  const name = el("#tmplName"), body = el("#tmplBody"), add = el("#addTemplate");
-  const tpls = loadTemplates() || {};
-  function refresh(){
-    list.innerHTML = "";
-    Object.entries(tpls).forEach(([k,v])=>{
-      const row = document.createElement("div");
-      row.className = "item";
-      row.innerHTML = `<div><strong>${k}</strong></div>
-                       <div class="small muted">${(v?.body||"").slice(0,120)}</div>
-                       <div><button class="btn rm">Remove</button></div>`;
-      row.querySelector(".rm")?.addEventListener("click", ()=>{ delete tpls[k]; saveTemplates(tpls); refresh(); });
-      list.appendChild(row);
-    });
-  }
-  add?.addEventListener("click", ()=>{
-    const key = name?.value?.trim(); const txt = body?.value ?? "";
-    if(!key){ alert("Template key is required"); return; }
-    tpls[key] = { body: txt }; saveTemplates(tpls); refresh(); toast("Template saved");
-  });
-  refresh();
-}
-
-function buildRulesPanel(){
-  const s = loadNotifySettings();
-  const qh = el("#quiet"), soon = el("#dueSoonHrs"), late = el("#onLate"), dsum = el("#summaryTime"), tmpl = el("#alertTemplate");
-  if(qh)   qh.value   = s.quiet || "21:00-07:00";
-  if(soon) soon.value = String(s.dueSoonHours ?? 24);
-  if(late) late.checked = !!s.onLate;
-  if(dsum) dsum.value = s.summaryTime || "19:30";
-  if(tmpl) tmpl.value = s.alertTemplate || "due_soon";
-  el("#rulesSave")?.addEventListener("click", ()=>{
-    saveNotifySettings({
-      quiet: qh?.value || "21:00-07:00",
-      dueSoonHours: Number(soon?.value || 24),
-      onLate: !!late?.checked,
-      summaryTime: dsum?.value || "19:30",
-      alertTemplate: tmpl?.value || "due_soon"
-    });
-    toast("Rules saved");
-  });
-}
-
-function buildBypassList(){
-  const list = el("#bypassList"); if(!list) return;
-  const map = loadBypass() || {};
-  list.innerHTML = "";
-  const ids = Object.keys(map);
-  if(!ids.length){ const d = document.createElement("div"); d.className="muted small"; d.textContent="Nothing is bypassed."; list.appendChild(d); return; }
-  ids.forEach(id=>{
-    const row = document.createElement("div"); row.className="item";
-    row.innerHTML = `<div>Assignment ${id}</div><div><button class="btn unb">Unbypass</button></div>`;
-    row.querySelector(".unb")?.addEventListener("click", ()=>{
-      const m = loadBypass() || {}; delete m[id]; saveBypass(m);
-      const x = assignments.find(a=>a.id===id);
-      if(x){ x.status = classifyFromDate(x._base, m); x._label = displayLabel(x.status); x._weight = weight(x.status); }
-      recomputeSummary(assignments); render();
-    });
-    list.appendChild(row);
-  });
-}
-
-function wireEmailTest(){
-  const btn = el("#sendTestEmail"); if(!btn) return;
-  const subj = el("#emailTestSubject"), body = el("#emailTestBody"), status = el("#sendTestEmailStatus");
-  btn.addEventListener("click", async ()=>{
-    const pwd = prompt("Admin password to send test email:");
-    if(pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
-    btn.disabled = true; if(status) status.textContent = "Sending…";
-    try{
-      const rsp = await sendEmailsToConfiguredRecipients({ subject: subj?.value || "Homework — Test", text: body?.value || "Test email" });
-      if(status) status.textContent = `Sent ${rsp?.sent ?? 0} email(s)`; toast("Email sent");
-    }catch(e){ console.error(e); if(status) status.textContent = "Failed"; alert(String(e?.message||e)); }
-    finally{ btn.disabled = false; setTimeout(()=>{ if(status) status.textContent=""; }, 4000); }
-  });
-}
-
-function loadAdminUI(){ buildRecipientsPanel(); buildTemplatesPanel(); buildRulesPanel(); wireEmailTest(); }
-
-// ------------------------ Boot ------------------------
-function boot(){
-  // Filters
-  wireFilters();
-  // Sync button
-  wireSync();
-  // Admin modal
-  wireAdminModal();
-  // Auto-sync if configured
-  if (CONFIG.autoSyncOnLoad) {
-    setTimeout(() => el("#syncBtn")?.click(), 50);
-  }
-}
-document.addEventListener("DOMContentLoaded", boot);
-
-// ===== wiring helpers kept last to avoid duplicate declarations =====
+// ------------------------ Wiring ------------------------
 function wireFilters(){
   const ctrls = ["#searchInput","#fLate","#fToday","#fTomorrow",
                  "#fUpcoming","#fBypassed","#fSubmitted","#fReturned"];
   ctrls.forEach(sel=>{
     const evt = sel === "#searchInput" ? "input" : "change";
-    el(sel)?.addEventListener(evt, ()=>{
-      recomputeSummary(assignments);
-      syncCountersFromFilters();
-      render();
-    });
+    el(sel)?.addEventListener(evt, ()=>{ recomputeSummary(assignments); syncCountersFromFilters(); render(); });
   });
 }
+function wireSync(){
+  const btn = el("#syncBtn");
+  if(!btn) return;
+  btn.addEventListener("click", async ()=>{
+    try{
+      loading && (loading.style.display = "block"); btn.disabled = true;
+      await syncFromClassroom();   // classroom.js dispatches "assignments:loaded"
+    }catch(err){ console.error(err); alert("Sync failed: " + (err?.message||err)); }
+    finally{ btn.disabled = false; loading && (loading.style.display = "none"); }
+  });
+}
+
+// ------------------------ Boot ------------------------
+function boot(){
+  ensureTelegramDefaults(); // prefill defaults even before unlock (if fields are visible)
+  wireFilters();
+  wireSync();
+  wireAdmin();              // admin modal & panels
+  if (CONFIG.autoSyncOnLoad) setTimeout(() => el("#syncBtn")?.click(), 50);
+}
+document.addEventListener("DOMContentLoaded", boot);
