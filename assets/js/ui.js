@@ -241,20 +241,6 @@ document.addEventListener("assignments:loaded", (e)=>{
   render();
 });
 
-// ------------------------ Wiring ------------------------
-function wireFilters(){
-  const ctrls = ["#searchInput","#fLate","#fToday","#fTomorrow",
-                 "#fUpcoming","#fBypassed","#fSubmitted","#fReturned"];
-  ctrls.forEach(sel=>{
-    const evt = sel === "#searchInput" ? "input" : "change";
-    el(sel)?.addEventListener(evt, ()=>{
-      recomputeSummary(assignments);
-      syncCountersFromFilters();
-      render();
-    });
-  });
-}
-
 function wireSync(){
   const btn = el("#syncBtn");
   if(!btn) return;
