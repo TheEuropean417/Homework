@@ -1,4 +1,4 @@
-// assets/js/ui.js — COMPLETE
+// assets/js/ui.js — COMPLETE (status classification, sorting, counters)
 
 import { CONFIG } from "./config.js";
 import { syncFromClassroom } from "./classroom.js";
@@ -10,126 +10,234 @@ import {
 } from "./state.js";
 import { sendEmailsToConfiguredRecipients } from "./email.js";
 
-const el = (s, r=document) => r.querySelector(s);
+const el  = (s, r=document) => r.querySelector(s);
 
+// ---------- toast ----------
 export function toast(msg){
   const t = el("#toast"), m = el("#toastMsg");
   if(!t || !m) return;
-  m.textContent = msg; t.classList.add("show");
+  m.textContent = msg;
+  t.classList.add("show");
   setTimeout(()=>t.classList.remove("show"), 1800);
 }
 
-let assignments = [];   // normalized for rendering
+// ---------- view state ----------
+let assignments = [];   // normalized & classified for rendering
 const cards   = el("#cards");
 const loading = el("#loading");
 const empty   = el("#empty");
 
-/* ---------- helpers ---------- */
-function fmtDate(iso){ try{ return iso ? new Date(iso).toLocaleString() : "—"; }catch{ return "—"; } }
+// ---------- utils ----------
+const toISO = (x)=>{
+  try{
+    if(!x) return null;
+    if (x instanceof Date) return x.toISOString();
+    const d = new Date(x);
+    return isNaN(d) ? null : d.toISOString();
+  }catch{ return null; }
+};
+const fmtDate = (iso)=> {
+  try{ return iso ? new Date(iso).toLocaleString() : "—"; }catch{ return "—"; }
+};
 
-// derive status if API didn’t set one
-function deriveStatus(a){
-  if (a.status && a.status !== "UNKNOWN") return a.status;
-  if (!a.dueDateISO) return "UPCOMING";
+// status shown as color class
+const statusClass = (s)=>{
+  if(s==="BYPASSED")     return "byp";
+  if(s==="LATE")         return "late";
+  if(s==="DUE_TODAY")    return "today";
+  if(s==="DUE_TOMORROW") return "tomorrow";
+  if(s==="DONE"||s==="COMPLETED") return "done";
+  if(s==="SUBMITTED")    return "sub";
+  if(s==="RETURNED")     return "ret";
+  return "up"; // UPCOMING → green
+};
+
+const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
+
+function classify(base) {
+  // Preserve explicit statuses if present (e.g., SUBMITTED/RETURNED from Classroom)
+  const explicit = (base.status||"").toUpperCase();
+  if (["SUBMITTED","RETURNED","DONE","COMPLETED","BYPASSED","LATE","DUE_TODAY","DUE_TOMORROW","UPCOMING","DUE"].includes(explicit)) {
+    // Normalize any plain "DUE" coming from feeds to UPCOMING (we still *display* DUE label)
+    return explicit === "DUE" ? "UPCOMING" : explicit;
+  }
+
+  const iso = base.dueDateISO;
+  if(!iso) return "UPCOMING";
+
   const now = new Date();
-  const due = new Date(a.dueDateISO);
-  const today = new Date(now); today.setHours(0,0,0,0);
+  const due = new Date(iso);
+  const today    = startOfDay(now);
   const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-  if (due < now) return "LATE";
-  if (due.toDateString() === today.toDateString()) return "DUE_TODAY";
+
+  if (due < now)                         return "LATE";
+  if (due.toDateString() === today.toDateString())    return "DUE_TODAY";
   if (due.toDateString() === tomorrow.toDateString()) return "DUE_TOMORROW";
   return "UPCOMING";
 }
 
-function statusClass(s){
-  if(s === "BYPASSED") return "byp";
-  if(s === "LATE")     return "late";
-  if(s === "DUE_TODAY")return "today";
-  if(s === "DUE_TOMORROW") return "tomorrow";
-  if(s === "DONE" || s === "COMPLETED") return "done";
-  return "up";
-}
+// label text shown on the pill
+const displayLabel = (status) => {
+  if (status === "UPCOMING") return "DUE"; // old UI wording
+  return status.replaceAll("_"," ");
+};
 
-/* ---------- filters ---------- */
+// sort: LATE → TODAY → TOMORROW → UPCOMING → SUBMITTED → RETURNED → DONE/COMPLETED → BYPASSED
+const weight = (s)=>{
+  const order = {
+    "LATE":0, "DUE_TODAY":1, "DUE_TOMORROW":2, "UPCOMING":3,
+    "SUBMITTED":4, "RETURNED":5, "DONE":6, "COMPLETED":6, "BYPASSED":7
+  };
+  return (s in order) ? order[s] : 9;
+};
+
+// ---------- filters ----------
 function shouldShow(a){
-  const fLate     = el("#fLate")?.checked ?? true;
-  const fToday    = el("#fToday")?.checked ?? true;
-  const fTom      = el("#fTomorrow")?.checked ?? true;
-  const fUpcoming = el("#fUpcoming")?.checked ?? true;
-  const fBypassed = el("#fBypassed")?.checked ?? false;
-  const q = el("#searchInput")?.value?.trim()?.toLowerCase() || "";
+  // chip filter checkboxes (ids from your HTML)
+  const fLate      = el("#fLate")?.checked ?? true;
+  const fToday     = el("#fToday")?.checked ?? true;
+  const fTomorrow  = el("#fTomorrow")?.checked ?? true;
+  const fUpcoming  = el("#fUpcoming")?.checked ?? true;
+  const fBypassed  = el("#fBypassed")?.checked ?? false;
+  const fSubmitted = el("#fSubmitted")?.checked ?? false;
+  const fReturned  = el("#fReturned")?.checked ?? false;
 
+  const q = el("#searchInput")?.value?.trim()?.toLowerCase() || "";
   if (q){
     const hay = `${a.title||""} ${a.course||""} ${a.notes||""} ${a.status||""}`.toLowerCase();
     if (!hay.includes(q)) return false;
   }
 
-  if (a.status === "BYPASSED")  return fBypassed;
-  if (a.status === "LATE")      return fLate;
-  if (a.status === "DUE_TODAY") return fToday;
-  if (a.status === "DUE_TOMORROW") return fTom;
-  // treat anything else as upcoming/active
-  return fUpcoming;
+  if (a.status === "BYPASSED")     return fBypassed;
+  if (a.status === "SUBMITTED")    return fSubmitted;
+  if (a.status === "RETURNED")     return fReturned;
+  if (a.status === "LATE")         return fLate;
+  if (a.status === "DUE_TODAY")    return fToday;
+  if (a.status === "DUE_TOMORROW") return fTomorrow;
+  return fUpcoming; // UPCOMING & everything else shown by "Upcoming"
 }
 
-/* ---------- render ---------- */
+// ---------- counters (top chips) ----------
+function updateCounters(list){
+  const c = { LATE:0, DUE_TODAY:0, DUE_TOMORROW:0, UPCOMING:0 };
+  for (const a of list){
+    if (a.status in c) c[a.status]++;
+    else if (!["SUBMITTED","RETURNED","DONE","COMPLETED","BYPASSED"].includes(a.status)) c.UPCOMING++;
+  }
+  const set = (id, val)=>{ const n = el(`#${id}`); if(n) n.textContent = String(val); };
+  set("statLate",        c.LATE);
+  set("statDueToday",    c.DUE_TODAY);
+  set("statDueTomorrow", c.DUE_TOMORROW);
+  set("statUpcoming",    c.UPCOMING);
+}
+
+// ---------- render ----------
 function render(){
   if (!cards) return;
   cards.innerHTML = "";
-  const bypassMap = loadBypass() || {};
-  let shown = 0;
 
+  let shown = 0;
   for (const a of assignments){
-    const s = a.status === "UNKNOWN" ? deriveStatus(a) : a.status;
-    const merged = {...a, status: s};
-    if (!shouldShow(merged)) continue;
+    if (!shouldShow(a)) continue;
     shown++;
 
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
       <div class="card-head">
-        <div class="title"><span class="dot ${statusClass(merged.status)}"></span>${merged.title || "Untitled"}</div>
-        <div class="badges"><span class="badge ${statusClass(merged.status)}">${(merged.status||"UNKNOWN").replace("_"," ")}</span></div>
+        <div class="title">
+          <span class="dot ${statusClass(a.status)}"></span>
+          ${a.title || "Untitled"}
+        </div>
+        <div class="badges">
+          <span class="badge ${statusClass(a.status)}">${displayLabel(a.status)}</span>
+        </div>
       </div>
-      <div class="meta">${merged.course || "—"} · Due: ${fmtDate(merged.dueDateISO)}</div>
-      ${merged.notes ? `<div class="small">${merged.notes}</div>` : ``}
+      <div class="meta">${a.course || "—"} · Due: ${fmtDate(a.dueDateISO)}</div>
+      ${a.notes ? `<div class="small">${a.notes}</div>` : ``}
       <div class="card-foot">
-        <div class="muted small">${bypassMap[merged.id] ? "Bypassed" : ""}</div>
-        <div class="card-actions"><button class="btn byp">${bypassMap[merged.id] ? "Unbypass" : "Bypass"}</button></div>
+        <div class="muted small">${a.status==="BYPASSED" ? "Bypassed" : ""}</div>
+        <div class="card-actions">
+          <button class="btn byp">${a.status==="BYPASSED" ? "Unbypass" : "Bypass"}</button>
+        </div>
       </div>
     `;
+
     card.querySelector(".byp")?.addEventListener("click", ()=>{
       const map = loadBypass() || {};
-      if (map[merged.id]) delete map[merged.id]; else map[merged.id] = true;
-      saveBypass(map); render(); toast(map[merged.id] ? "Bypassed" : "Unbypassed");
+      if (map[a.id]) delete map[a.id]; else map[a.id] = true;
+      saveBypass(map);
+      // flip status and re-render list/counters
+      a.status = map[a.id] ? "BYPASSED" : classify(a._base);
+      // keep display label in sync
+      a._label = displayLabel(a.status);
+      updateCounters(assignments);
+      render();
+      toast(map[a.id] ? "Bypassed" : "Unbypassed");
     });
+
     cards.appendChild(card);
   }
 
   if (empty) empty.classList.toggle("hidden", shown>0);
 }
 
-/* ---------- events from loader ---------- */
-// classroom.js dispatches this when data arrives
+// ---------- when classroom loader finishes ----------
 document.addEventListener("assignments:loaded", (e)=>{
-  assignments = Array.isArray(e.detail) ? e.detail.map(x => ({
-    id:String(x.id ?? `${x.title}-${x.dueDateISO??""}`),
-    title: x.title || "Untitled",
-    course: x.course || x.courseName || "",
-    dueDateISO: x.dueDateISO || null,
-    notes: x.description || x.notes || "",
-    status: x.status || (x.late ? "LATE" : "UNKNOWN")
-  })) : [];
-  console.log("[UI] assignments loaded:", assignments.length);
+  const raw = Array.isArray(e.detail) ? e.detail : [];
+  const bypassMap = loadBypass() || {};
+
+  // normalize -> classify -> decorate -> sort
+  const norm = raw.map(r => {
+    const base = {
+      id: String(r.id ?? `${r.title}-${r.dueDateISO??""}-${Math.random().toString(36).slice(2)}`),
+      title: r.title || r.name || "Untitled",
+      course: r.course || r.courseName || r.courseTitle || "",
+      notes: r.description || r.notes || "",
+      dueDateISO: toISO(r.dueDateISO || r.due || r.dueDate) // tolerate various shapes
+    };
+    const cls = classify(base);
+    const eff = bypassMap[base.id] ? "BYPASSED" : cls;
+    return {
+      ...base,
+      _base: base,                 // keep original for re-classify after unbypass
+      status: eff,
+      _label: displayLabel(eff),
+      _weight: weight(eff),
+      _dueMs: base.dueDateISO ? Date.parse(base.dueDateISO) : Number.POSITIVE_INFINITY
+    };
+  });
+
+  norm.sort((a,b)=> (a._weight - b._weight) || (a._dueMs - b._dueMs) || a.title.localeCompare(b.title) );
+  assignments = norm;
+
+  updateCounters(assignments);
   render();
 });
 
-/* ---------- wire controls ---------- */
+// ---------- filters, admin, wiring ----------
 function wireFilters(){
   el("#searchInput")?.addEventListener("input", render);
-  ["#fLate","#fToday","#fTomorrow","#fUpcoming","#fBypassed"].forEach(sel=>{
-    el(sel)?.addEventListener("change", render);
+  ["#fLate","#fToday","#fTomorrow","#fUpcoming","#fBypassed","#fSubmitted","#fReturned"]
+    .forEach(id => el(id)?.addEventListener("change", render));
+}
+
+function wireSync(){
+  const btn = el("#syncBtn");
+  if(!btn) return;
+  btn.addEventListener("click", async ()=>{
+    try{
+      loading && (loading.style.display = "block");
+      btn.disabled = true;
+      await syncFromClassroom(); // fires "assignments:loaded"
+    }catch(err){
+      console.error(err);
+      toast("Sync failed");
+      alert(String(err?.message||err));
+    }finally{
+      btn.disabled = false;
+      loading && (loading.style.display = "none");
+    }
   });
 }
 
@@ -140,7 +248,7 @@ function wireAdminModal(){
   el("#adminClose")?.addEventListener("click", ()=>modal.close());
   el("#adminPwToggle")?.addEventListener("click", (ev)=>{
     const inp = el("#adminPassword"); if(!inp) return;
-    const isPass = inp.type === "password"; inp.type = isPass ? "text":"password";
+    const isPass = inp.type === "password"; inp.type = isPass ? "text" : "password";
     ev.currentTarget.setAttribute("aria-label", isPass ? "Hide password":"Show password");
   });
   el("#adminUnlock")?.addEventListener("click", ()=>{
@@ -149,11 +257,11 @@ function wireAdminModal(){
     el("#adminErr")?.classList.add("hidden");
     el("#adminGate")?.classList.add("hidden");
     el("#adminBody")?.classList.remove("hidden");
-    loadAdminUI(); buildBypassList();
+    loadAdminUI(); buildBypassList(); // populate panels
   });
 }
 
-/* ---- Admin: Recipients ---- */
+// ---- Admin: Recipients ----
 function buildRecipientsPanel(){
   const list = el("#recipientsList"); if(!list) return;
   const data = loadRecipients() || [];
@@ -163,7 +271,9 @@ function buildRecipientsPanel(){
     row.className = "item";
     row.innerHTML = `<div>${r.name||"—"}</div><div>${r.email||"—"}</div><div>${r.telegram_chat_id||r.chatId||"—"}</div><div><button class="btn rm">Remove</button></div>`;
     row.querySelector(".rm")?.addEventListener("click", ()=>{
-      const next = (loadRecipients()||[]).filter(x => !(x.name===r.name && x.email===r.email && (x.telegram_chat_id||x.chatId)===(r.telegram_chat_id||r.chatId)));
+      const next = (loadRecipients()||[]).filter(x =>
+        !(x.name===r.name && x.email===r.email && (x.telegram_chat_id||x.chatId)===(r.telegram_chat_id||r.chatId))
+      );
       saveRecipients(next); buildRecipientsPanel(); toast("Recipient removed");
     });
     list.appendChild(row);
@@ -181,7 +291,7 @@ function buildRecipientsPanel(){
   });
 }
 
-/* ---- Admin: Templates ---- */
+// ---- Admin: Templates ----
 function buildTemplatesPanel(){
   const list = el("#templatesList"); if(!list) return;
   const name = el("#tmplName"), body = el("#tmplBody"), add = el("#addTemplate");
@@ -204,7 +314,7 @@ function buildTemplatesPanel(){
   refresh();
 }
 
-/* ---- Admin: Rules ---- */
+// ---- Admin: Rules ----
 function buildRulesPanel(){
   const s = loadNotifySettings();
   const qh = el("#quiet"), soon = el("#dueSoonHrs"), late = el("#onLate"), dsum = el("#summaryTime"), tmpl = el("#alertTemplate");
@@ -213,7 +323,6 @@ function buildRulesPanel(){
   if(late) late.checked = !!s.onLate;
   if(dsum) dsum.value = s.summaryTime || "19:30";
   if(tmpl) tmpl.value = s.alertTemplate || "due_soon";
-  // Save button (if present)
   el("#rulesSave")?.addEventListener("click", ()=>{
     saveNotifySettings({
       quiet: qh?.value || "21:00-07:00",
@@ -226,7 +335,7 @@ function buildRulesPanel(){
   });
 }
 
-/* ---- Admin: Bypass list ---- */
+// ---- Admin: Bypass list ----
 function buildBypassList(){
   const list = el("#bypassList"); if(!list) return;
   const map = loadBypass() || {};
@@ -236,12 +345,17 @@ function buildBypassList(){
   ids.forEach(id=>{
     const row = document.createElement("div"); row.className="item";
     row.innerHTML = `<div>Assignment ${id}</div><div><button class="btn unb">Unbypass</button></div>`;
-    row.querySelector(".unb")?.addEventListener("click", ()=>{ const m=loadBypass()||{}; delete m[id]; saveBypass(m); buildBypassList(); render(); });
+    row.querySelector(".unb")?.addEventListener("click", ()=>{
+      const m = loadBypass() || {}; delete m[id]; saveBypass(m);
+      // also flip card if currently visible
+      const x = assignments.find(a=>a.id===id); if(x){ x.status = classify(x._base); x._label = displayLabel(x.status); }
+      updateCounters(assignments); render();
+    });
     list.appendChild(row);
   });
 }
 
-/* ---- Admin: Test Email ---- */
+// ---- Admin: Test Email ----
 function wireEmailTest(){
   const btn = el("#sendTestEmail"); if(!btn) return;
   const subj = el("#emailTestSubject"), body = el("#emailTestBody"), status = el("#sendTestEmailStatus");
@@ -259,10 +373,20 @@ function wireEmailTest(){
 
 function loadAdminUI(){ buildRecipientsPanel(); buildTemplatesPanel(); buildRulesPanel(); wireEmailTest(); }
 
-/* ---------- boot ---------- */
+// ---------- boot ----------
 function boot(){
-  wireFilters();
+  // filters
+  el("#searchInput")?.addEventListener("input", render);
+  ["#fLate","#fToday","#fTomorrow","#fUpcoming","#fBypassed","#fSubmitted","#fReturned"]
+    .forEach(id => el(id)?.addEventListener("change", render));
+
+  wireSync();
   wireAdminModal();
-  // sync button is already wired inside classroom.js; also auto-syncs on load there. 
+
+  // Optional auto-sync on load if set
+  if (CONFIG.autoSyncOnLoad) {
+    setTimeout(() => el("#syncBtn")?.click(), 50);
+  }
 }
+
 document.addEventListener("DOMContentLoaded", boot);
