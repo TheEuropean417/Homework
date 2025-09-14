@@ -152,6 +152,15 @@ function render(){
       const map = loadBypass() || {};
       if (map[a.id]) delete map[a.id]; else map[a.id] = true;
       localStorage.setItem("bypassMap", JSON.stringify(map)); // state.js uses localStorage under the hood
+      fetch("/api/saveAssignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: CONFIG.adminPassword,
+          assignments
+        })
+      }).catch(err => console.error("Failed to sync bypasses:", err));
+
       a.status  = classifyFromDate(a._base, map);
       a._label  = displayLabel(a.status);
       a._weight = weight(a.status);
