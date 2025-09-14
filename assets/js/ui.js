@@ -152,6 +152,7 @@ function render(){
       const map = loadBypass() || {};
       if (map[a.id]) delete map[a.id]; else map[a.id] = true;
       localStorage.setItem("bypassMap", JSON.stringify(map)); // state.js uses localStorage under the hood
+      // --- push updated assignments back to the server (requires Vercel/serverless) ---
       fetch("/api/saveAssignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
