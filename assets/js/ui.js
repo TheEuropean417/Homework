@@ -153,14 +153,16 @@ function render(){
       if (map[a.id]) delete map[a.id]; else map[a.id] = true;
       localStorage.setItem("bypassMap", JSON.stringify(map)); // state.js uses localStorage under the hood
       // --- push updated assignments back to the server (requires Vercel/serverless) ---
-      fetch("/api/saveAssignments", {
+      // --- push updated assignments to repo (commit via API) ---
+      fetch(CONFIG.saveEndpoint || "homework-api/api/saveAssignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           password: CONFIG.adminPassword,
           assignments
         })
-      }).catch(err => console.error("Failed to sync bypasses:", err));
+      }).catch(err => console.error("Failed to sync assignments.json:", err));
+
 
       a.status  = classifyFromDate(a._base, map);
       a._label  = displayLabel(a.status);
