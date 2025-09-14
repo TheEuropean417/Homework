@@ -210,8 +210,21 @@ document.addEventListener("assignments:loaded", (e)=>{
     };
   });
 
+  // --- NEW: sync localStorage with server-bypassed items ---
+  assignments.forEach(a => {
+    if (a.status === "BYPASSED") {
+      const map = loadBypass() || {};
+      if (!map[a.id]) {
+        map[a.id] = true;
+        localStorage.setItem("bypassMap", JSON.stringify(map));
+      }
+    }
+  });
+  // ---------------------------------------------------------
+
   recomputeSummary(assignments); syncCountersFromFilters(); render();
 });
+
 
 // ------------------------ Wiring ------------------------
 function wireFilters(){
