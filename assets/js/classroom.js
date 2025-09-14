@@ -6,6 +6,33 @@ import { CONFIG } from "./config.js";
 import { evaluateAndMaybeNotify } from "./notify.js";
 import { loadBypass } from "./state.js";
 
+// ---- classification helpers (mirrors ui.js) ----
+const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
+const sameDay = (a,b)=> a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+
+function classifyFromDate(base, bypassMap = {}) {
+  if (bypassMap[base.id]) return "BYPASSED";
+
+  const sub = (base.submissionState || "").toUpperCase();
+  if (sub === "TURNED_IN") return "SUBMITTED";
+  if (sub === "RETURNED")  return "RETURNED";
+
+  const iso = base.dueDateISO;
+  const due = iso ? new Date(iso) : null;
+  const now = new Date();
+
+  if (!due) return "UPCOMING";
+  if (due < now) return "LATE";
+
+  const today = startOfDay(now);
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+
+  if (sameDay(due, today))    return "DUE_TODAY";
+  if (sameDay(due, tomorrow)) return "DUE_TOMORROW";
+  return "UPCOMING";
+}
+// ---- end helpers ----
+
 let firstSyncDone = false;
 
 /**
@@ -73,11 +100,11 @@ export async function syncFromClassroom(force = false) {
       course: a.course || a.courseName || "",
       dueDateISO: a.dueDateISO || null,
       notes: a.description || a.notes || "",
-      // Classroom submission fields (if provided by API):
-      submissionState: a.submissionState || null, // NEW | CREATED | TURNED_IN | RETURNED | RECLAIMED_BY_STUDENT
-      late: !!a.late,                               // boolean flag from API (if present)
-      // Local-only UI status (bypass overlay)
-      status: bypassMap[id] ? "BYPASSED" : classifyFromDate(a._base, map)
+      // Keep submission state (UI may show SUBMITTED/RETURNED)
+      submissionState: a.submissionState || null,
+      late: !!a.late,
+      // Local-only overlay: if bypassed locally, mark BYPASSED; otherwise keep server status (or UNKNOWN)
+      status: bypassMap[id] ? "BYPASSED" : (a.status || "UNKNOWN")
     };
   });
 

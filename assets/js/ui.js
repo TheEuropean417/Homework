@@ -153,7 +153,7 @@ function render(){
       if (map[a.id]) delete map[a.id]; else map[a.id] = true;
       localStorage.setItem("bypassMap", JSON.stringify(map)); // state.js uses localStorage under the hood
       // --- push updated assignments back to the server (requires Vercel/serverless) ---
-      // --- push updated assignments to repo (commit via API) ---
+      // --- write-through commit to repo via homework-api ---
       fetch(CONFIG.saveEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,9 +164,22 @@ function render(){
       }).catch(err => console.error("saveAssignments failed:", err));
 
 
+
       a.status  = classifyFromDate(a._base, map);
       a._label  = displayLabel(a.status);
       a._weight = weight(a.status);
+
+      // mirror server BYPASSED → localStorage so any browser opens in sync
+      assignments.forEach(a => {
+        if (a.status === "BYPASSED") {
+          const m = loadBypass() || {};
+          if (!m[a.id]) {
+            m[a.id] = true;
+            localStorage.setItem("bypassMap", JSON.stringify(m));
+          }
+        }
+      });
+
       recomputeSummary(assignments); syncCountersFromFilters(); render();
       // --- persist bypass changes to server ---
       fetch("/api/saveAssignments", {
