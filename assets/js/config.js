@@ -7,6 +7,6 @@ export const CONFIG = {
 
   // NEW: defaults used to prefill Admin UI
   telegramDefaultChatId: "6406811650",
-  telegramBotToken: "8427542086:AAEms3DMRG692b084EgUcgyaFSdjV_jdjjo"
-  saveEndpoint: "https://homework-liart-ten.vercel.app/homework-api/api/saveAssignments",
+  telegramBotToken: "8427542086:AAEms3DMRG692b084EgUcgyaFSdjV_jdjjo",
+  saveEndpoint: "https://homework-liart-ten.vercel.app/api/saveAssignments",
 };
