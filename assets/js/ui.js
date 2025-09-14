@@ -156,6 +156,18 @@ function render(){
       a._label  = displayLabel(a.status);
       a._weight = weight(a.status);
       recomputeSummary(assignments); syncCountersFromFilters(); render();
+      // --- persist bypass changes to server ---
+      fetch("/api/saveAssignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: CONFIG.adminPassword,
+          assignments: assignments   // send the whole updated list
+        })
+      }).then(r => r.json())
+        .then(j => { if (!j.ok) console.error("Save failed:", j.error); })
+        .catch(err => console.error("Save error:", err));
+
     });
 
     cards.appendChild(card);
