@@ -77,7 +77,7 @@ export async function syncFromClassroom(force = false) {
       submissionState: a.submissionState || null, // NEW | CREATED | TURNED_IN | RETURNED | RECLAIMED_BY_STUDENT
       late: !!a.late,                               // boolean flag from API (if present)
       // Local-only UI status (bypass overlay)
-      status: bypassMap[id] ? "BYPASSED" : (a.status || "UNKNOWN")
+      status: bypassMap[id] ? "BYPASSED" : classifyFromDate(a._base, map)
     };
   });
 
