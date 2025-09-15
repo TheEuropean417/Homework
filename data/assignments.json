@@ -5,7 +5,7 @@
     "title": "Chapter 3 Worksheet",
     "description": "Problems 1–20 odd.",
     "dueDate": "2025-09-08T23:59:00-05:00",
-    "status": "DUE_TODAY"
+    "status": "UPCOMING"
   },
   {
     "id": "a2",
@@ -13,7 +13,7 @@
     "title": "Read Act II",
     "description": "Annotate key quotes.",
     "dueDate": "2025-09-09T17:00:00-05:00",
-    "status": "DUE_TOMORROW"
+    "status": "UPCOMING"
   },
   {
     "id": "a3",
@@ -29,6 +29,6 @@
     "title": "Essay Draft",
     "description": "First draft (500–700 words).",
     "dueDate": "2025-09-05T23:59:00-05:00",
-    "status": "LATE"
+    "status": "UPCOMING"
   }
 ]
