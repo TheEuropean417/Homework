@@ -46,6 +46,7 @@ const statusClass  = (s)=> s==="BYPASSED" ? "byp"
   : s==="RETURNED"  ? "ret" : "up";
 
 const weight = (s)=>({LATE:0,DUE_TODAY:1,DUE_TOMORROW:2,UPCOMING:3,SUBMITTED:4,RETURNED:5,DONE:6,COMPLETED:6,BYPASSED:7}[s] ?? 9);
+
 const submissionLabel = (a)=> {
   switch ((a.submissionState||"").toUpperCase()){
     case "TURNED_IN": return "SUBMITTED";
@@ -53,6 +54,7 @@ const submissionLabel = (a)=> {
     default: return null;
   }
 };
+
 function classifyFromDate(base, bypassMap){
   if (bypassMap && bypassMap[base.id]) return "BYPASSED";
   const sub = submissionLabel(base); if (sub) return sub;
@@ -69,6 +71,7 @@ function classifyFromDate(base, bypassMap){
 function recomputeSummary(list){
   let kLate=0,kToday=0,kTom=0,kUp=0,kSub=0,kRet=0;
   for (const a of list){
+    if (!a) continue;
     if (a.status==="SUBMITTED") kSub++;
     if (a.status==="RETURNED")  kRet++;
     if (a.status==="LATE") kLate++;
@@ -163,15 +166,16 @@ function onBypassClick(evt){
   if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
 
   // Toggle in local store
-  const m = loadBypass() || {};
-  if (m[id]) delete m[id]; else m[id] = true;
-  localStorage.setItem("bypassMap", JSON.stringify(m));
+  let map;
+  try { map = JSON.parse(localStorage.getItem("bypassMap") || "{}"); } catch { map = {}; }
+  if (map[id]) delete map[id]; else map[id] = true;
+  localStorage.setItem("bypassMap", JSON.stringify(map));
 
   // Update the in-memory item so UI reflects immediately
   const a = assignments.find(x => x.id === id);
   if (a) {
     const base = a._base || a;
-    a.status  = m[id] ? "BYPASSED" : classifyFromDate(base, m);
+    a.status  = map[id] ? "BYPASSED" : classifyFromDate(base, map);
     a._label  = displayLabel(a.status);
     a._weight = weight(a.status);
     a._dueMs  = base.dueDateISO ? Date.parse(base.dueDateISO) : Number.POSITIVE_INFINITY;
@@ -193,15 +197,13 @@ function onBypassClick(evt){
 cards?.addEventListener("click", onBypassClick, false);
 
 // ------------------------ Data Arrival (from classroom.js) ------------------------
-// ------------------------ Data Arrival (from classroom.js) ------------------------
 document.addEventListener("assignments:loaded", (e)=>{
-  // 1) Compact: keep only truthy objects
+  // 1) Compact/guard input
   const raw = (Array.isArray(e.detail) ? e.detail : []).filter(Boolean);
   const bypassMap = loadBypass() || {};
 
-  // 2) Normalize each record safely
+  // 2) Normalize each record safely, preserve incoming BYPASSED
   assignments = raw.map((r) => {
-    // guard every access on r
     const idSafe    = r?.id ?? `${r?.title ?? "Untitled"}-${r?.dueDateISO ?? r?.dueDate ?? ""}-${Math.random().toString(36).slice(2)}`;
     const titleSafe = r?.title || r?.name || "Untitled";
     const courseSafe= r?.course || r?.courseName || r?.courseTitle || "";
@@ -218,11 +220,8 @@ document.addEventListener("assignments:loaded", (e)=>{
       submissionState: subState
     };
 
-    // Preserve incoming BYPASSED (from classroom.js overlay) otherwise derive
     const incoming = String(r?.status || "").toUpperCase();
-    const cls = (incoming === "BYPASSED")
-      ? "BYPASSED"
-      : classifyFromDate(base, bypassMap);
+    const cls = (incoming === "BYPASSED") ? "BYPASSED" : classifyFromDate(base, bypassMap);
 
     return {
       ...base,
@@ -232,10 +231,11 @@ document.addEventListener("assignments:loaded", (e)=>{
       _weight: weight(cls),
       _dueMs:  base.dueDateISO ? Date.parse(base.dueDateISO) : Number.POSITIVE_INFINITY
     };
-  }).filter(Boolean); // compact again, just in case
+  }).filter(Boolean);
 
   // 3) Mirror BYPASSED from server → localStorage (guard each a)
-  const local = loadBypass() || {};
+  let local;
+  try { local = JSON.parse(localStorage.getItem("bypassMap") || "{}"); } catch { local = {}; }
   let mutated = false;
   for (const a of assignments) {
     if (a && a.status === "BYPASSED" && !local[a.id]) {
@@ -248,18 +248,6 @@ document.addEventListener("assignments:loaded", (e)=>{
   recomputeSummary(assignments);
   syncCountersFromFilters();
   render();
-});
-
-
-  // sync localStorage with any BYPASSED coming from server
-  const local = loadBypass() || {};
-  let changed = false;
-  for (const a of assignments){
-    if (a.status === "BYPASSED" && !local[a.id]) { local[a.id] = true; changed = true; }
-  }
-  if (changed) localStorage.setItem("bypassMap", JSON.stringify(local));
-
-  recomputeSummary(assignments); syncCountersFromFilters(); render();
 });
 
 // ------------------------ Wiring ------------------------
@@ -279,7 +267,7 @@ function wireSync(){
       if (loading) loading.style.display = "block";
       btn.disabled = true;
       await syncFromClassroom();   // classroom.js dispatches "assignments:loaded"
-    }catch(err){ console.error(err); alert("Sync failed: " + (err?.message||err)); }
+    }catch(err){ console.error(err); toast("Sync failed"); }
     finally{ btn.disabled = false; if (loading) loading.style.display = "none"; }
   });
 }
