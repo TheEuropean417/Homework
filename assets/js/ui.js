@@ -206,15 +206,8 @@ document.addEventListener("assignments:loaded", (e)=>{
       dueDateISO: toISO(r.dueDateISO || r.due || r.dueDate),
       submissionState: r.submissionState || r.submission_state
     };
-    const cls = classifyFromDate(base, bypassMap);
-    return {
-      ...base,
-      _base:   base,
-      status:  cls,
-      _label:  displayLabel(cls),
-      _weight: weight(cls),
-      _dueMs:  base.dueDateISO ? Date.parse(base.dueDateISO) : Number.POSITIVE_INFINITY
-    };
+    const incoming = String(r.status||"").toUpperCase();
+    const cls = incoming === "BYPASSED" ? "BYPASSED" : classifyFromDate(base, bypassMap);
   });
 
   // sync localStorage with any BYPASSED coming from server
