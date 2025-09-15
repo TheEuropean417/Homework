@@ -5,7 +5,7 @@
     "title": "Chapter 3 Worksheet",
     "description": "Problems 1–20 odd.",
     "dueDate": "2025-09-08T23:59:00-05:00",
-    "status": "DUE_TODAY"
+    "status": "LATE"
   },
   {
     "id": "a2",
@@ -13,7 +13,7 @@
     "title": "Read Act II",
     "description": "Annotate key quotes.",
     "dueDate": "2025-09-09T17:00:00-05:00",
-    "status": "DUE_TOMORROW"
+    "status": "LATE"
   },
   {
     "id": "a3",
@@ -21,7 +21,7 @@
     "title": "Quiz Review",
     "description": "Study guide",
     "dueDate": "2025-09-12T08:00:00-05:00",
-    "status": "UPCOMING"
+    "status": "LATE"
   },
   {
     "id": "a4",
