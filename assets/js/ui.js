@@ -193,22 +193,63 @@ function onBypassClick(evt){
 cards?.addEventListener("click", onBypassClick, false);
 
 // ------------------------ Data Arrival (from classroom.js) ------------------------
+// ------------------------ Data Arrival (from classroom.js) ------------------------
 document.addEventListener("assignments:loaded", (e)=>{
-  const raw = Array.isArray(e.detail) ? e.detail : [];
+  // 1) Compact: keep only truthy objects
+  const raw = (Array.isArray(e.detail) ? e.detail : []).filter(Boolean);
   const bypassMap = loadBypass() || {};
 
-  assignments = raw.map(r => {
+  // 2) Normalize each record safely
+  assignments = raw.map((r) => {
+    // guard every access on r
+    const idSafe    = r?.id ?? `${r?.title ?? "Untitled"}-${r?.dueDateISO ?? r?.dueDate ?? ""}-${Math.random().toString(36).slice(2)}`;
+    const titleSafe = r?.title || r?.name || "Untitled";
+    const courseSafe= r?.course || r?.courseName || r?.courseTitle || "";
+    const notesSafe = r?.description || r?.notes || "";
+    const isoSafe   = toISO(r?.dueDateISO || r?.dueDate || r?.due || null);
+    const subState  = r?.submissionState || r?.submission_state || null;
+
     const base = {
-      id: String(r.id ?? `${r.title}-${r.dueDateISO??""}-${Math.random().toString(36).slice(2)}`),
-      title: r.title || r.name || "Untitled",
-      course: r.course || r.courseName || r.courseTitle || "",
-      notes: r.description || r.notes || "",
-      dueDateISO: toISO(r.dueDateISO || r.due || r.dueDate),
-      submissionState: r.submissionState || r.submission_state
+      id: String(idSafe),
+      title: titleSafe,
+      course: courseSafe,
+      notes: notesSafe,
+      dueDateISO: isoSafe,
+      submissionState: subState
     };
-    const incoming = String(r.status||"").toUpperCase();
-    const cls = incoming === "BYPASSED" ? "BYPASSED" : classifyFromDate(base, bypassMap);
-  });
+
+    // Preserve incoming BYPASSED (from classroom.js overlay) otherwise derive
+    const incoming = String(r?.status || "").toUpperCase();
+    const cls = (incoming === "BYPASSED")
+      ? "BYPASSED"
+      : classifyFromDate(base, bypassMap);
+
+    return {
+      ...base,
+      _base:   base,
+      status:  cls,
+      _label:  displayLabel(cls),
+      _weight: weight(cls),
+      _dueMs:  base.dueDateISO ? Date.parse(base.dueDateISO) : Number.POSITIVE_INFINITY
+    };
+  }).filter(Boolean); // compact again, just in case
+
+  // 3) Mirror BYPASSED from server → localStorage (guard each a)
+  const local = loadBypass() || {};
+  let mutated = false;
+  for (const a of assignments) {
+    if (a && a.status === "BYPASSED" && !local[a.id]) {
+      local[a.id] = true; mutated = true;
+    }
+  }
+  if (mutated) localStorage.setItem("bypassMap", JSON.stringify(local));
+
+  // 4) Render
+  recomputeSummary(assignments);
+  syncCountersFromFilters();
+  render();
+});
+
 
   // sync localStorage with any BYPASSED coming from server
   const local = loadBypass() || {};
