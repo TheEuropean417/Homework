@@ -394,9 +394,9 @@
       "dueDateISO": "2025-08-20T04:59:00.000Z",
       "submissionState": null
     },
-    "status": "BYPASSED",
-    "_label": "BYPASSED",
-    "_weight": 7,
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
     "_dueMs": 1755665940000
   },
   {
@@ -518,5 +518,45 @@
     "_label": "LATE",
     "_weight": 0,
     "_dueMs": 1756184340000
+  },
+  {
+    "id": "803104899454",
+    "title": "#1 Test: The Giver Chapters 1-6",
+    "course": "5th Hour English",
+    "notes": "",
+    "dueDateISO": "2025-09-13T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "803104899454",
+      "title": "#1 Test: The Giver Chapters 1-6",
+      "course": "5th Hour English",
+      "notes": "",
+      "dueDateISO": "2025-09-13T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757739540000
+  },
+  {
+    "id": "799352007941",
+    "title": "Introduction Video OR Letter",
+    "course": "5th Hour English",
+    "notes": "",
+    "dueDateISO": "2025-08-30T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "799352007941",
+      "title": "Introduction Video OR Letter",
+      "course": "5th Hour English",
+      "notes": "",
+      "dueDateISO": "2025-08-30T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1756529940000
   }
 ]
