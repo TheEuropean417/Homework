@@ -1,34 +1,562 @@
 [
   {
-    "id": "a1",
-    "courseId": "c1",
-    "title": "Chapter 3 Worksheet",
-    "description": "Problems 1–20 odd.",
-    "dueDate": "2025-09-08T23:59:00-05:00",
-    "status": "LATE"
+    "id": "796353352097",
+    "title": "The Gospel of Matthew Presentation",
+    "course": "7th Grade Bible",
+    "notes": "The students will use the 8 guidelines given in class to create a slide show presentation about their assigned scripture.\nThe students will be graded based on turning it in on time and being prepared (10 Points),  the quality of the slides (10 Points), their knowledge of the scripture (10 Points), and their ability to engage the audience (10 Points).",
+    "dueDateISO": "2025-09-10T06:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "796353352097",
+      "title": "The Gospel of Matthew Presentation",
+      "course": "7th Grade Bible",
+      "notes": "The students will use the 8 guidelines given in class to create a slide show presentation about their assigned scripture.\nThe students will be graded based on turning it in on time and being prepared (10 Points),  the quality of the slides (10 Points), their knowledge of the scripture (10 Points), and their ability to engage the audience (10 Points).",
+      "dueDateISO": "2025-09-10T06:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757487540000
   },
   {
-    "id": "a2",
-    "courseId": "c2",
-    "title": "Read Act II",
-    "description": "Annotate key quotes.",
-    "dueDate": "2025-09-09T17:00:00-05:00",
-    "status": "LATE"
+    "id": "800126426518",
+    "title": "Scientific Method Vocab Quiz",
+    "course": "Earth and Space Science",
+    "notes": "",
+    "dueDateISO": "2025-08-28T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "800126426518",
+      "title": "Scientific Method Vocab Quiz",
+      "course": "Earth and Space Science",
+      "notes": "",
+      "dueDateISO": "2025-08-28T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1756357140000
   },
   {
-    "id": "a3",
-    "courseId": "c1",
-    "title": "Quiz Review",
-    "description": "Study guide",
-    "dueDate": "2025-09-12T08:00:00-05:00",
-    "status": "LATE"
+    "id": "795459245811",
+    "title": "Syllabus Review",
+    "course": "Earth and Space Science",
+    "notes": "With your family, read through our class syllabus and complete the form. Easy 10 points!",
+    "dueDateISO": "2025-08-30T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "795459245811",
+      "title": "Syllabus Review",
+      "course": "Earth and Space Science",
+      "notes": "With your family, read through our class syllabus and complete the form. Easy 10 points!",
+      "dueDateISO": "2025-08-30T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1756529940000
   },
   {
-    "id": "a4",
-    "courseId": "c2",
-    "title": "Essay Draft",
-    "description": "First draft (500–700 words).",
-    "dueDate": "2025-09-05T23:59:00-05:00",
-    "status": "LATE"
+    "id": "795459117038",
+    "title": "All About Me",
+    "course": "Earth and Space Science",
+    "notes": "1-Slide Slide Show\n\nUsing only 1 slide, create a slide show that represents you. You can use pictures, words, memes, emojis (all appropriate, of course) or anything else that this 1 slide can hold. Be creative and tell Mr. A all about YOU!",
+    "dueDateISO": "2025-08-23T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "795459117038",
+      "title": "All About Me",
+      "course": "Earth and Space Science",
+      "notes": "1-Slide Slide Show\n\nUsing only 1 slide, create a slide show that represents you. You can use pictures, words, memes, emojis (all appropriate, of course) or anything else that this 1 slide can hold. Be creative and tell Mr. A all about YOU!",
+      "dueDateISO": "2025-08-23T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1755925140000
+  },
+  {
+    "id": "805602875884",
+    "title": "Test 2 Review",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "Review:\nPg 44. (36,38, 41 a&b)\nPg. 88-89 (2-10 even, 12-21 all, 24-33 all)\n\nNotes:\n1. Add and subtract Integers (no calculator portion)\n2. Graph ordered pairs on a coordinate plane\n3. Write the ordered pair that is provided on a graph\n4. Use <, > or =\n5.Absolute Value (single value or used in an expression)\n6. Express relation as a table, graph and identify the domain and range\n7. 2 Word problems (create an algebraic expression and determine the value of y)",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "805602875884",
+      "title": "Test 2 Review",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "Review:\nPg 44. (36,38, 41 a&b)\nPg. 88-89 (2-10 even, 12-21 all, 24-33 all)\n\nNotes:\n1. Add and subtract Integers (no calculator portion)\n2. Graph ordered pairs on a coordinate plane\n3. Write the ordered pair that is provided on a graph\n4. Use <, > or =\n5.Absolute Value (single value or used in an expression)\n6. Express relation as a table, graph and identify the domain and range\n7. 2 Word problems (create an algebraic expression and determine the value of y)",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "803040524667",
+    "title": "2-3 Subtracting Integers ",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "H.W. Lesson 3 Skills Practice sheet\n1 - 36 All",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "803040524667",
+      "title": "2-3 Subtracting Integers ",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "H.W. Lesson 3 Skills Practice sheet\n1 - 36 All",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "804965855948",
+    "title": "2-2 Adding Integers",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "2:2 Adding Integers\nGo over KC- Key Concepts on pg. 55-57 (Add integers with the same sign, with different signs, more than two integers, additive inverse property)\nHW - Pages 58-59 (10-21 all, 24-32 all)",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "804965855948",
+      "title": "2-2 Adding Integers",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "2:2 Adding Integers\nGo over KC- Key Concepts on pg. 55-57 (Add integers with the same sign, with different signs, more than two integers, additive inverse property)\nHW - Pages 58-59 (10-21 all, 24-32 all)",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "802974516850",
+    "title": "2-1 Integers and Absolute Value",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "2:1 Integers and Absolute Value\nDefine - negative number, positive number, integer, opposites, coordinate, inequality, absolute value\nHW - Handout",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "802974516850",
+      "title": "2-1 Integers and Absolute Value",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "2:1 Integers and Absolute Value\nDefine - negative number, positive number, integer, opposites, coordinate, inequality, absolute value\nHW - Handout",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "796340456269",
+    "title": "1-7 Words, Equations, Tables, and Graphs",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "796340456269",
+      "title": "1-7 Words, Equations, Tables, and Graphs",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "796270603979",
+    "title": "1-6 Ordered Pairs and Relations",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "796270603979",
+      "title": "1-6 Ordered Pairs and Relations",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "795938543947",
+    "title": "Test 1 Review Questions and Components",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "Test 1 Review Questions and Components\n\nREVIEW (1:1-4)\nProblem Solving\nWords and Expressions\nVariables\nProperties of Numbers\nHW  Page 36 (45-48 all)\nPage 42 (2, 5-12)\nPage 43 (14-30 even)\n\nReview Components\n\n1. Evaluate the Expressions and Solve (Remember Order of Operations)\n\n2. Convert verbal phrases to numerical expressions\n\n3. Convert Verbal phrases to algebraic expressions\n\n4. Evaluate each expression when algebraic value is known\n\n5. Write and evaluate a written expression (numerical)\n\n6. Properties of Addition and Multiplication/Number Properties\n\n7. Write an algebraic expression using known facts.",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "795938543947",
+      "title": "Test 1 Review Questions and Components",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "Test 1 Review Questions and Components\n\nREVIEW (1:1-4)\nProblem Solving\nWords and Expressions\nVariables\nProperties of Numbers\nHW  Page 36 (45-48 all)\nPage 42 (2, 5-12)\nPage 43 (14-30 even)\n\nReview Components\n\n1. Evaluate the Expressions and Solve (Remember Order of Operations)\n\n2. Convert verbal phrases to numerical expressions\n\n3. Convert Verbal phrases to algebraic expressions\n\n4. Evaluate each expression when algebraic value is known\n\n5. Write and evaluate a written expression (numerical)\n\n6. Properties of Addition and Multiplication/Number Properties\n\n7. Write an algebraic expression using known facts.",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "795900923667",
+    "title": "1-4 Properties of Numbers",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "795900923667",
+      "title": "1-4 Properties of Numbers",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "795850624300",
+    "title": "1-3 Variables and Expressions",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "795850624300",
+      "title": "1-3 Variables and Expressions",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "795707652929",
+    "title": "1-2 Words and Expressions",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "795707652929",
+      "title": "1-2 Words and Expressions",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "799332107134",
+    "title": "1-1  A Plan for Problem Solving",
+    "course": "(6th) Math II-A 1 (25-26)",
+    "notes": "",
+    "dueDateISO": null,
+    "submissionState": null,
+    "_base": {
+      "id": "799332107134",
+      "title": "1-1  A Plan for Problem Solving",
+      "course": "(6th) Math II-A 1 (25-26)",
+      "notes": "",
+      "dueDateISO": null,
+      "submissionState": null
+    },
+    "status": "UPCOMING",
+    "_label": "UPCOMING",
+    "_weight": 3,
+    "_dueMs": null
+  },
+  {
+    "id": "806016900877",
+    "title": "❓ 🌍 Map Quiz: Mesopotamia",
+    "course": "Ancient History 4th Hour",
+    "notes": "Complete the attached map quiz.  Be careful of using arrows to scroll as they may change your answer.",
+    "dueDateISO": "2025-09-13T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "806016900877",
+      "title": "❓ 🌍 Map Quiz: Mesopotamia",
+      "course": "Ancient History 4th Hour",
+      "notes": "Complete the attached map quiz.  Be careful of using arrows to scroll as they may change your answer.",
+      "dueDateISO": "2025-09-13T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757739540000
+  },
+  {
+    "id": "802844493874",
+    "title": "🟢 Sumer Reading Comprehension: Writing System & Ziggurat",
+    "course": "Ancient History 4th Hour",
+    "notes": "Use the readings in your Study Stash to complete these comprehension questions.",
+    "dueDateISO": "2025-09-11T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "802844493874",
+      "title": "🟢 Sumer Reading Comprehension: Writing System & Ziggurat",
+      "course": "Ancient History 4th Hour",
+      "notes": "Use the readings in your Study Stash to complete these comprehension questions.",
+      "dueDateISO": "2025-09-11T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757566740000
+  },
+  {
+    "id": "796006372325",
+    "title": "❓📜 History Toolkit Vocabulary Quiz",
+    "course": "Ancient History 4th Hour",
+    "notes": "Be careful of using arrow keys to scroll as they may change your answer.",
+    "dueDateISO": "2025-08-30T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "796006372325",
+      "title": "❓📜 History Toolkit Vocabulary Quiz",
+      "course": "Ancient History 4th Hour",
+      "notes": "Be careful of using arrow keys to scroll as they may change your answer.",
+      "dueDateISO": "2025-08-30T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1756529940000
+  },
+  {
+    "id": "795690431864",
+    "title": "🟢 Time Traveler's Trial: Unlock Social Studies Skills",
+    "course": "Ancient History 4th Hour",
+    "notes": "This assessment helps your teacher see your current strengths in understanding social studies concepts and using social studies tools.  You may or may not be able to answer every question correctly, but do your best!",
+    "dueDateISO": "2025-08-22T20:20:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "795690431864",
+      "title": "🟢 Time Traveler's Trial: Unlock Social Studies Skills",
+      "course": "Ancient History 4th Hour",
+      "notes": "This assessment helps your teacher see your current strengths in understanding social studies concepts and using social studies tools.  You may or may not be able to answer every question correctly, but do your best!",
+      "dueDateISO": "2025-08-22T20:20:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1755894000000
+  },
+  {
+    "id": "795617382253",
+    "title": "Get to know you",
+    "course": "JH FACS-3",
+    "notes": "Please create a Google document with the following:\n1. Favorite food(s).\n2. Pets with names\n3. Siblings with ages.\n4. Are you a day or night person?\n5. Best friend(s0 here at NCA.\n6. Where do you go to church?",
+    "dueDateISO": "2025-08-20T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "795617382253",
+      "title": "Get to know you",
+      "course": "JH FACS-3",
+      "notes": "Please create a Google document with the following:\n1. Favorite food(s).\n2. Pets with names\n3. Siblings with ages.\n4. Are you a day or night person?\n5. Best friend(s0 here at NCA.\n6. Where do you go to church?",
+      "dueDateISO": "2025-08-20T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "BYPASSED",
+    "_label": "BYPASSED",
+    "_weight": 7,
+    "_dueMs": 1755665940000
+  },
+  {
+    "id": "803084046855",
+    "title": "Poem #6 - Warm-Up Poem",
+    "course": "Creative Writing II",
+    "notes": "Please label your document title as: Poem #6 - Warm-Up Poem\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+    "dueDateISO": "2025-09-12T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "803084046855",
+      "title": "Poem #6 - Warm-Up Poem",
+      "course": "Creative Writing II",
+      "notes": "Please label your document title as: Poem #6 - Warm-Up Poem\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+      "dueDateISO": "2025-09-12T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757653140000
+  },
+  {
+    "id": "803022144409",
+    "title": "Poem #5 - Alternate Formula",
+    "course": "Creative Writing II",
+    "notes": "Please label your document title as: Poem #5 - Alternate Formula\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+    "dueDateISO": "2025-09-10T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "803022144409",
+      "title": "Poem #5 - Alternate Formula",
+      "course": "Creative Writing II",
+      "notes": "Please label your document title as: Poem #5 - Alternate Formula\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+      "dueDateISO": "2025-09-10T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757480340000
+  },
+  {
+    "id": "796366757007",
+    "title": "Poem #4 - Concrete Poem",
+    "course": "Creative Writing II",
+    "notes": "Please label your document title as: Poem #4 - Concrete Poem\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+    "dueDateISO": "2025-09-09T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "796366757007",
+      "title": "Poem #4 - Concrete Poem",
+      "course": "Creative Writing II",
+      "notes": "Please label your document title as: Poem #4 - Concrete Poem\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+      "dueDateISO": "2025-09-09T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757393940000
+  },
+  {
+    "id": "796235095011",
+    "title": "Poem #3",
+    "course": "Creative Writing II",
+    "notes": "Please label your document title with the type of poem you wrote. For example: Poem #3 - Ballad\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+    "dueDateISO": "2025-09-05T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "796235095011",
+      "title": "Poem #3",
+      "course": "Creative Writing II",
+      "notes": "Please label your document title with the type of poem you wrote. For example: Poem #3 - Ballad\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+      "dueDateISO": "2025-09-05T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757048340000
+  },
+  {
+    "id": "795921538550",
+    "title": "Poem #2",
+    "course": "Creative Writing II",
+    "notes": "Please label your document title with the type of poem you wrote. For example: Poem #2 - Acrostic\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+    "dueDateISO": "2025-08-29T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "795921538550",
+      "title": "Poem #2",
+      "course": "Creative Writing II",
+      "notes": "Please label your document title with the type of poem you wrote. For example: Poem #2 - Acrostic\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?\n\n\nYou must also submit this on TurnItIn.",
+      "dueDateISO": "2025-08-29T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1756443540000
+  },
+  {
+    "id": "795733743573",
+    "title": "Poem #1",
+    "course": "Creative Writing II",
+    "notes": "Please label your document title with the type of poem you wrote. For example: Poem #1 - Villanelle\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?",
+    "dueDateISO": "2025-08-26T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "795733743573",
+      "title": "Poem #1",
+      "course": "Creative Writing II",
+      "notes": "Please label your document title with the type of poem you wrote. For example: Poem #1 - Villanelle\n\nRemember to include a short reflection - this does not have to be very lengthy, I just need to see that you have given thought to your writing process.\n\nThings to consider when writing your reflection:\nWhat was your thought process as you wrote your first draft? What were you hoping to achieve with this piece?\nWhat kind of feedback did you receive in peer review?\nWhat did your revision process look like?",
+      "dueDateISO": "2025-08-26T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1756184340000
+  },
+  {
+    "id": "803104899454",
+    "title": "#1 Test: The Giver Chapters 1-6",
+    "course": "5th Hour English",
+    "notes": "",
+    "dueDateISO": "2025-09-13T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "803104899454",
+      "title": "#1 Test: The Giver Chapters 1-6",
+      "course": "5th Hour English",
+      "notes": "",
+      "dueDateISO": "2025-09-13T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1757739540000
+  },
+  {
+    "id": "799352007941",
+    "title": "Introduction Video OR Letter",
+    "course": "5th Hour English",
+    "notes": "",
+    "dueDateISO": "2025-08-30T04:59:00.000Z",
+    "submissionState": null,
+    "_base": {
+      "id": "799352007941",
+      "title": "Introduction Video OR Letter",
+      "course": "5th Hour English",
+      "notes": "",
+      "dueDateISO": "2025-08-30T04:59:00.000Z",
+      "submissionState": null
+    },
+    "status": "LATE",
+    "_label": "LATE",
+    "_weight": 0,
+    "_dueMs": 1756529940000
   }
 ]
