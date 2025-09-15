@@ -141,29 +141,27 @@ function render(){
       <div class="card-foot">
         <div class="muted small">${a.status==="BYPASSED" ? "Bypassed" : ""}</div>
         <div class="card-actions">
-          <button class="btn byp">${a.status==="BYPASSED" ? "Unbypass" : "Bypass"}</button>
+          <button class="btn byp" data-id="${a.id}">${a.status==="BYPASSED" ? "Unbypass" : "Bypass"}</button>
         </div>
       </div>
     `;
 
-    card.querySelector(".byp")?.addEventListener("click", ()=>{
-      const pwd = prompt("Admin password to toggle bypass:");
-      if(pwd !== CONFIG.adminPassword){ alert("Incorrect password."); return; }
-      const map = loadBypass() || {};
-      if (map[a.id]) delete map[a.id]; else map[a.id] = true;
-      localStorage.setItem("bypassMap", JSON.stringify(map)); // state.js uses localStorage under the hood
+    //card.querySelector(".byp")?.addEventListener("click", ()=>{
+     // const pwd = prompt("Admin password to toggle bypass:");
+      //if(pwd !== CONFIG.adminPassword){ alert("Incorrect password."); return; }
+      //const map = loadBypass() || {};
+      //if (map[a.id]) delete map[a.id]; else map[a.id] = true;
+      //localStorage.setItem("bypassMap", JSON.stringify(map)); // state.js uses localStorage under the hood
       // --- push updated assignments back to the server (requires Vercel/serverless) ---
       // --- write-through commit to repo via homework-api ---
-      fetch(CONFIG.saveEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: CONFIG.adminPassword,
-          assignments
-        })
-      }).catch(err => console.error("saveAssignments failed:", err));
-
-
+      //fetch(CONFIG.saveEndpoint, {
+      //  method: "POST",
+      //  headers: { "Content-Type": "application/json" },
+      //  body: JSON.stringify({
+      //    password: CONFIG.adminPassword,
+      //    assignments
+      //  })
+      //}).catch(err => console.error("saveAssignments failed:", err));
 
       a.status  = classifyFromDate(a._base, map);
       a._label  = displayLabel(a.status);
@@ -193,13 +191,55 @@ function render(){
         .then(j => { if (!j.ok) console.error("Save failed:", j.error); })
         .catch(err => console.error("Save error:", err));
 
-    });
+    };
 
     cards.appendChild(card);
   }
 
   if (empty) empty.classList.toggle("hidden", shown>0);
+
+// --- Delegated bypass/unbypass handler on the cards container ---
+function onBypassClick(evt){
+  const btn = evt.target.closest("button.byp");
+  if (!btn) return;
+
+  const id = btn.getAttribute("data-id");
+  if (!id) return;
+
+  const pwd = prompt("Admin password to toggle bypass:");
+  if (pwd !== CONFIG.adminPassword) { alert("Incorrect password."); return; }
+
+  // Toggle in local store
+  const map = JSON.parse(localStorage.getItem("bypassMap") || "{}");
+  if (map[id]) delete map[id]; else map[id] = true;
+  localStorage.setItem("bypassMap", JSON.stringify(map));
+
+  // Update the in-memory item so UI reflects immediately
+  const a = assignments.find(x => x.id === id);
+  if (a) {
+    const base = a._base || a;
+    a.status  = map[id] ? "BYPASSED" : classifyFromDate(base, map);
+    a._label  = displayLabel(a.status);
+    a._weight = weight(a.status);
+  }
+
+  // Re-render
+  recomputeSummary(assignments);
+  syncCountersFromFilters();
+  render();
+
+  // Optional: write-through commit so everyone stays in sync
+  if (typeof CONFIG !== "undefined" && CONFIG.saveEndpoint) {
+    fetch(CONFIG.saveEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: CONFIG.adminPassword, assignments })
+    }).catch(err => console.error("saveAssignments failed:", err));
+  }
 }
+
+// Wire once (do this in boot or once DOM is ready)
+cards?.addEventListener("click", onBypassClick, false);
 
 // ------------------------ Data Arrival (from classroom.js) ------------------------
 document.addEventListener("assignments:loaded", (e)=>{
