@@ -1,43 +1,15 @@
 // assets/js/classroom.js
-// ES module for the browser. Handles syncing from your /api/classroom,
-// normalizes results, triggers notifications, and broadcasts to the UI.
+// ES module: fetch Classroom data, overlay local + committed BYPASSED, dispatch to UI.
 
 import { CONFIG } from "./config.js";
 import { evaluateAndMaybeNotify } from "./notify.js";
 import { loadBypass } from "./state.js";
 
-// ---- classification helpers (mirrors ui.js) ----
-const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
-const sameDay = (a,b)=> a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
-
-function classifyFromDate(base, bypassMap = {}) {
-  if (bypassMap[base.id]) return "BYPASSED";
-
-  const sub = (base.submissionState || "").toUpperCase();
-  if (sub === "TURNED_IN") return "SUBMITTED";
-  if (sub === "RETURNED")  return "RETURNED";
-
-  const iso = base.dueDateISO;
-  const due = iso ? new Date(iso) : null;
-  const now = new Date();
-
-  if (!due) return "UPCOMING";
-  if (due < now) return "LATE";
-
-  const today = startOfDay(now);
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
-
-  if (sameDay(due, today))    return "DUE_TODAY";
-  if (sameDay(due, tomorrow)) return "DUE_TOMORROW";
-  return "UPCOMING";
-}
-// ---- end helpers ----
-
 let firstSyncDone = false;
 
 /**
- * Pull assignments from API and emit "assignments:loaded".
- * @param {boolean} force - if true, shows the loading state even after first sync.
+ * Pull assignments from API endpoints and emit "assignments:loaded".
+ * @param {boolean} force - if true, shows loading even after first sync.
  */
 export async function syncFromClassroom(force = false) {
   const cardsEl   = document.getElementById("cards");
@@ -51,11 +23,11 @@ export async function syncFromClassroom(force = false) {
     if (cardsEl && force) cardsEl.innerHTML = "";
   }
 
-  // Endpoints: allow string or array in config, coerce to array
-  const endpointsRaw = CONFIG.classroomEndpoints ?? [];
+  // Endpoints: allow string or array in config
+  const endpointsRaw = CONFIG?.classroomEndpoints ?? [];
   const endpoints = Array.isArray(endpointsRaw) ? endpointsRaw : [endpointsRaw];
   if (endpoints.length === 0) {
-    console.warn("CONFIG.classroomEndpoints is missing or empty.");
+    console.warn("[classroom] CONFIG.classroomEndpoints is missing/empty.");
     loadingEl?.classList.add("hidden");
     emptyEl?.classList.remove("hidden");
     return;
@@ -66,7 +38,7 @@ export async function syncFromClassroom(force = false) {
   let lastErr = null;
   for (const url of endpoints) {
     try {
-      const res = await fetch(url, { mode: "cors" });
+      const res = await fetch(url, { mode: "cors", cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       payload = await res.json();
       break;
@@ -79,50 +51,66 @@ export async function syncFromClassroom(force = false) {
   firstSyncDone = true;
 
   if (!payload) {
-    console.warn("Classroom sync failed:", lastErr);
+    console.warn("[classroom] sync failed:", lastErr);
     emptyEl?.classList.remove("hidden");
     if (cardsEl) cardsEl.innerHTML = "";
     return;
   }
 
-  // Accept either { assignments: [...] } or a raw array
+  // Accept either { assignments: [...] } or raw array
   const raw = Array.isArray(payload) ? payload : (payload.assignments || []);
 
-  // Local bypass overlay
-  const bypassMap = loadBypass();
+  // Overlay from local bypass map first
+  const bypassMap = loadBypass() || {};
 
-  // Normalize records for the UI
-  const list = (raw || []).map(a => {
-    const id = String(a.id ?? `${a.title}-${a.dueDateISO ?? ""}`);
+  // Normalize records for the UI (no classification; UI handles it later)
+  let list = (raw || []).map(a => {
+    const id = String(a.id ?? `${a.title}-${(a.dueDateISO ?? a.dueDate ?? "")}`);
     return {
       id,
-      title: a.title || "Untitled",
-      course: a.course || a.courseName || "",
-      dueDateISO: a.dueDateISO || null,
+      title: a.title || a.name || "Untitled",
+      course: a.course || a.courseName || a.courseTitle || "",
+      dueDateISO: a.dueDateISO || a.dueDate || a.due || null,
       notes: a.description || a.notes || "",
-      // Keep submission state (UI may show SUBMITTED/RETURNED)
-      submissionState: a.submissionState || null,
+      submissionState: a.submissionState || a.submission_state || null,
       late: !!a.late,
-      // Local-only overlay: if bypassed locally, mark BYPASSED; otherwise keep server status (or UNKNOWN)
-      status: bypassMap[id] ? "BYPASSED" : (a.status || "UNKNOWN")
+      // Local overlay wins for BYPASSED; otherwise keep server-provided status if any (uppercased), else UNKNOWN
+      status: bypassMap[id] ? "BYPASSED" : ((a.status || "UNKNOWN").toUpperCase())
     };
   });
 
-  // Fire notification pipeline (Telegram/Email) but never block rendering
-  try { await evaluateAndMaybeNotify(list); } catch (e) { console.warn("Notify failed:", e); }
+  // Overlay BYPASSED from committed /data/assignments.json (fresh, no cache)
+  try {
+    const fileUrl = new URL("data/assignments.json", location.href);
+    fileUrl.searchParams.set("ts", String(Date.now())); // cache buster
+    const fr = await fetch(fileUrl.href, { cache: "no-store", mode: "cors" });
+    if (fr.ok) {
+      const fileArr = await fr.json();
+      if (Array.isArray(fileArr)) {
+        const fileMap = new Map(fileArr.map(x => [String(x.id), String((x.status || "").toUpperCase())]));
+        list = list.map(a => (fileMap.get(a.id) === "BYPASSED" ? { ...a, status: "BYPASSED" } : a));
+      }
+    }
+  } catch (e) {
+    console.warn("[classroom] Overlay from data/assignments.json failed:", e);
+  }
+
+  // Fire notification pipeline (non-blocking)
+  try { if (typeof evaluateAndMaybeNotify === "function") await evaluateAndMaybeNotify(list); }
+  catch (e) { console.warn("[classroom] notify failed:", e); }
 
   // Let the UI render
   document.dispatchEvent(new CustomEvent("assignments:loaded", { detail: list }));
 }
 
 // Auto-sync on load if enabled
-if (typeof window !== "undefined" && CONFIG.autoSyncOnLoad) {
+if (typeof window !== "undefined" && CONFIG?.autoSyncOnLoad) {
   window.addEventListener("load", () => {
     setTimeout(() => { syncFromClassroom().catch(console.error); }, 80);
   });
 }
 
-// Also wire the button here (safe if it's absent)
+// Also wire the Sync button here (safe if absent)
 document.getElementById("syncBtn")?.addEventListener("click", () => {
   syncFromClassroom(true).catch(console.error);
 });
