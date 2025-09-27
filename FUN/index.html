@@ -22,21 +22,22 @@
   body{color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
   #game-container{position:relative;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw;overflow:hidden}
 
-  /* ✅ Ensure HTML `hidden` actually hides even if CSS sets display */
+  /* ✅ Ensure HTML `hidden` really hides elements even if CSS sets display */
   [hidden]{display:none !important;}
 
   /* Canvas (transparent & layered under UI) */
   canvas#game{display:block;image-rendering:crisp-edges;image-rendering:pixelated;outline:none;position:relative;z-index:1;background:transparent}
 
-  /* UI layer above canvas */
-  #ui{position:absolute;inset:0;pointer-events:none;z-index:2}
-  /* Re-enable pointer events for interactive parts inside #ui */
-  #boot, .panel, .overlay-card, #mobile{pointer-events:auto}
+  /* UI layer sits above canvas and accepts events (fix for unclickable menu) */
+  #ui{position:absolute;inset:0;z-index:2;pointer-events:auto}
 
-  .panel{position:absolute;inset:auto 0 0 0;margin:auto;max-width:min(720px,92vw);pointer-events:auto;
+  /* Panels: only the *visible* panel is clickable */
+  .panel{position:absolute;inset:auto 0 0 0;margin:auto;max-width:min(720px,92vw);
          background:var(--panel);backdrop-filter:blur(6px);border:1px solid #2b355b;border-radius:14px;
-         box-shadow:0 20px 80px #000a;opacity:0;transform:translateY(20px) scale(.98);transition:.25s ease; padding:18px}
-  .panel.visible{opacity:1;transform:translateY(0) scale(1)}
+         box-shadow:0 20px 80px #000a;opacity:0;transform:translateY(20px) scale(.98);transition:.25s ease; padding:18px;
+         pointer-events:none} /* <- default: not clickable */
+  .panel.visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto} /* <- clickable when visible */
+
   .panel h1{margin:.2rem 0 .6rem;font-size:28px;letter-spacing:.5px}
   .panel h2{margin:.2rem 0 .4rem;font-size:20px}
   .row{display:flex;gap:12px;flex-wrap:wrap}
@@ -64,7 +65,7 @@
   .list li{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px dashed #2b355b}
   .right{margin-left:auto}
 
-  /* Overlays — visible when NOT [hidden]; hidden is enforced by the rule above */
+  /* Overlays: root has no pointer events; the card gets them */
   #pauseOverlay,#gameOverOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
   .overlay-card{pointer-events:auto;max-width:min(560px,92vw);padding:18px;background:var(--panel-strong);border:1px solid #29315c;border-radius:14px;box-shadow:0 20px 80px #000c}
   .overlay-card h2{margin:.2rem 0 .6rem}
@@ -111,7 +112,7 @@
 
     <!-- Main Menu -->
     <div id="menu" class="panel">
-      <h1>Galaxy Patrol <span class="badge">v1.0.2</span></h1>
+      <h1>Galaxy Patrol <span class="badge">v1.0.3</span></h1>
       <div class="split">
         <div>
           <button class="btn big" id="newGameBtn">▶ New Game</button>
@@ -289,8 +290,8 @@
 (function(){
 'use strict';
 
-/** Galaxy Patrol — single-file HTML5 arcade shooter (v1.0.2).
- *  Fix: overlays obey `hidden` (CSS rule + boot-time hide).
+/** Galaxy Patrol — single-file HTML5 arcade shooter (v1.0.3).
+ *  Fix: UI is fully clickable (pointer-events only on visible panels).
  */
 
 /* ==============================
@@ -738,7 +739,9 @@ function gameLoop(ts){
    ============================== */
 const $=sel=>document.querySelector(sel);
 const panels={menu:$('#menu'),options:$('#options'),how:$('#how'),leader:$('#leader'),credits:$('#credits')};
-function showPanel(name){ for(const [k,el] of Object.entries(panels)){ if (!el) continue; if (k===name) el.classList.add('visible'); else el.classList.remove('visible'); } }
+function showPanel(name){
+  for(const [k,el] of Object.entries(panels)){ if (!el) continue; if (k===name) el.classList.add('visible'); else el.classList.remove('visible'); }
+}
 function hideAllPanels(){ for(const el of Object.values(panels)) el.classList.remove('visible'); }
 
 function refreshMenuStatus(){
@@ -876,9 +879,10 @@ window.addEventListener('beforeunload', ()=>{ const g=gameState.game; if (g?.run
    ============================== */
 resizeCanvas();
 paintBootBG();
-/* ✅ Make sure both overlays are hidden on page load (extra safety) */
+/* Keep overlays hidden on load (safety) */
 document.getElementById('pauseOverlay').hidden = true;
 document.getElementById('gameOverOverlay').hidden = true;
+/* Focus canvas on click if needed */
 document.getElementById('game').addEventListener('pointerdown', ()=> document.getElementById('game').focus());
 
 })(); // IIFE end
