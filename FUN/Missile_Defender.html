@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
-<title>Asteroid Bastion — Missile Defense</title>
+<title>Asteroid Bastion — Elite Missile Defense</title>
 <style>
   :root{
-    --bg:#081024;
-    --panel:#0c1230cc;
+    --bg:#080f22;
+    --panel:#0b1230cc;
     --panel-strong:#0d1437e6;
     --text:#e7f1ff;
     --muted:#9fb0d8;
@@ -21,16 +21,16 @@
   body{color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
   #game-container{position:relative;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw;overflow:hidden}
 
-  /* Honor [hidden] regardless of CSS display */
+  /* Honor [hidden] even if CSS sets display */
   [hidden]{display:none !important;}
 
-  /* Canvas sits under UI; transparent until we paint */
-  canvas#game{display:block;image-rendering:crisp-edges;image-rendering:pixelated;outline:none;position:relative;z-index:1;background:transparent}
+  /* Canvas (keep anti‑aliased for sharp vectors) */
+  canvas#game{display:block;outline:none;position:relative;z-index:1;background:transparent}
 
-  /* UI (menus/overlays) above canvas */
+  /* UI above canvas */
   #ui{position:absolute;inset:0;z-index:2;pointer-events:auto}
 
-  /* Futuristic panel */
+  /* Futuristic panels */
   .panel{
     position:absolute;inset:auto 0 0 0;margin:auto;max-width:min(760px,92vw);
     color:var(--text);background:linear-gradient(180deg,#0b1331ee,#0a1028dd);
@@ -49,7 +49,6 @@
   .row{display:flex;gap:12px;flex-wrap:wrap}
   .col{flex:1 1 240px;min-width:200px}
 
-  /* Neon buttons */
   .btn{
     appearance:none;border:1px solid #2a3a69;background:linear-gradient(180deg,#1a2350,#121944);
     color:var(--text);padding:12px 14px;border-radius:12px;cursor:pointer;font-weight:700;
@@ -87,7 +86,7 @@
   #boot{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
   #boot .overlay-card{text-align:center}
 
-  /* Mobile helper: small footer buttons (optional) */
+  /* Mobile helper */
   #mobile{position:absolute;inset:auto 0 10px 0;display:none;justify-content:center;gap:10px;padding:6px}
   .thumb{touch-action:none;border:1px solid #2b355b;background:#0e1433aa;color:#cde7ff;border-radius:12px;padding:12px 14px;min-width:84px;text-align:center;user-select:none}
   .thumb:active{filter:brightness(1.15)}
@@ -112,21 +111,22 @@
     <!-- Boot (unlock audio) -->
     <div id="boot">
       <div class="overlay-card">
-        <h2>Asteroid Bastion — Missile Defense</h2>
+        <h2>Asteroid Bastion — Elite</h2>
         <p class="muted">Click / Tap to initialize audio &amp; continue.</p>
         <div class="center" style="margin-top:8px">
           <button class="btn big" id="bootBtn">Start</button>
         </div>
         <p class="note" style="margin-top:10px">
-          Click anywhere above the ground to fire an interceptor. It <strong>detonates exactly</strong> at the clicked point.
-          Protect the cities on the asteroid. Pause: <span class="kbd">Esc</span> · Fullscreen: <span class="kbd">F</span>.
+          Click where you want the explosion. Interceptors detonate at your click.  
+          Specials: <b>1</b> Standard • <b>2</b> Cluster • <b>3</b> EMP • <b>4</b> Nuke.  
+          Pause: <span class="kbd">Esc</span> · Fullscreen: <span class="kbd">F</span>.
         </p>
       </div>
     </div>
 
     <!-- Main Menu -->
     <div id="menu" class="panel">
-      <h1>Asteroid Bastion <span class="badge">v2.0.0</span></h1>
+      <h1>Asteroid Bastion <span class="badge">v2.5.0</span></h1>
       <div class="split">
         <div>
           <button class="btn big" id="newGameBtn">▶ New Game</button>
@@ -146,7 +146,7 @@
           <div class="kv"><span>Saved Game</span><span id="saveStatus" class="badge">None</span></div>
           <div class="kv"><span>High Score</span><span id="hiStatus" class="badge">0</span></div>
           <div class="hr"></div>
-          <p class="note">Tip: you can lead targets; if your blast radius misses, they keep coming.</p>
+          <p class="note">Tip: lead targets. If the blast radius misses, threats keep falling.</p>
         </div>
       </div>
     </div>
@@ -172,14 +172,15 @@
           <div class="kv"><span>Screen Shake</span><label class="right"><input type="checkbox" id="optShake" checked></label></div>
           <div class="kv"><span>Star Density</span><span class="right"><select id="optStars"><option value="low">Low</option><option value="med" selected>Medium</option><option value="high">High</option></select></span></div>
           <div class="kv"><span>Reduce Motion</span><label class="right"><input type="checkbox" id="optReduce"></label></div>
+          <div class="kv"><span>Aim Preview</span><label class="right"><input type="checkbox" id="optPreview" checked></label></div>
         </div>
         <div>
           <h2>Gameplay</h2>
           <div class="kv"><span>Difficulty</span>
             <span class="right">
               <select id="optDifficulty">
-                <option value="easy">Easy</option>
-                <option value="normal" selected>Normal</option>
+                <option value="easy" selected>Easy</option>
+                <option value="normal">Normal</option>
                 <option value="hard">Hard</option>
                 <option value="insane">Insane</option>
               </select>
@@ -188,18 +189,18 @@
           <div class="kv"><span>Blast Radius</span>
             <span class="right">
               <select id="optBlast">
-                <option value="24">Small</option>
-                <option value="30" selected>Medium</option>
-                <option value="36">Large</option>
+                <option value="26">Small</option>
+                <option value="32">Medium</option>
+                <option value="38" selected>Large</option>
               </select>
             </span>
           </div>
           <div class="kv"><span>Interceptor Speed</span>
             <span class="right">
               <select id="optSpeed">
-                <option value="220">220</option>
-                <option value="260" selected>260</option>
-                <option value="300">300</option>
+                <option value="240">240</option>
+                <option value="280">280</option>
+                <option value="320" selected>320</option>
               </select>
             </span>
           </div>
@@ -219,19 +220,20 @@
       <div class="grid">
         <div>
           <h2>Objective</h2>
-          <p>Defend your asteroid cities. Meteors and enemy warheads descend from orbit. Click where you want your interceptor to <b>detonate</b>. The blast radius destroys anything inside. Miss the radius and threats keep falling.</p>
+          <p>Defend your asteroid cities. Click to detonate an interceptor <b>exactly</b> at your click point. Use <b>special weapons</b> (keys 1–4) for clutch moments.</p>
           <h2>Waves</h2>
-          <p>Each wave grows tougher: faster warheads, more meteors, and <b>MIRVs</b> that split mid‑flight. Bonus points for surviving cities.</p>
+          <p>Waves mix warheads, meteors, fast comets, MIRV splitters, and occasional armored warheads. Random speeds increase tension. Bonus specials awarded after waves.</p>
         </div>
         <div>
           <h2>Controls</h2>
           <ul class="list">
             <li><span>Fire</span><span class="kbd">Click / Tap</span></li>
+            <li><span>Special Select</span><span class="kbd">1–4</span></li>
             <li><span>Pause</span><span class="kbd">Esc</span></li>
             <li><span>Fullscreen</span><span class="kbd">F</span></li>
             <li><span>Mute</span><span class="kbd">M</span></li>
           </ul>
-          <p class="note">You can’t detonate early—missiles blow up exactly where you clicked.</p>
+          <p class="note">Click the weapon icons on the bottom HUD to select by mouse.</p>
         </div>
       </div>
       <div class="hr"></div>
@@ -253,7 +255,7 @@
     <div id="credits" class="panel">
       <h1>Credits</h1>
       <p>Design &amp; Code: <span class="badge">You + GPT‑5 Pro</span></p>
-      <p class="note">Homage to the classic <b>Missile Command</b>. Built with HTML5 Canvas &amp; Web Audio.</p>
+      <p class="note">A modern homage to <b>Missile Command</b> using HTML5 Canvas &amp; Web Audio.</p>
       <div class="center"><button class="btn" id="creditsBack">← Back</button></div>
     </div>
 
@@ -298,6 +300,7 @@
     <!-- Mobile helper -->
     <div id="mobile" aria-hidden="true">
       <div class="thumb" id="shootBtn">FIRE</div>
+      <div class="thumb" id="weaponBtn">WEAPON</div>
       <div class="thumb" id="pauseBtn">PAUSE</div>
     </div>
 
@@ -308,14 +311,12 @@
 (function(){
 'use strict';
 
-/** Asteroid Bastion — Missile Defense (v2.0.0)
- *  Click to launch an interceptor that detonates EXACTLY at the clicked point.
- *  If the blast radius doesn't reach a threat, it keeps falling toward your cities.
+/** Asteroid Bastion — Elite (v2.5.0)
+ *  Missiles detonate exactly at your click; special weapons; sharper visuals;
+ *  randomized speeds; easier Easy; wave variety; chain scoring.
  */
 
-/* ==============================
-   Helpers & Storage
-   ============================== */
+/* ============= Helpers & Storage ============= */
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const rand=(min,max)=>Math.random()*(max-min)+min;
@@ -328,27 +329,23 @@ const Store={
   del(k){try{localStorage.removeItem(k);}catch(e){}}
 };
 
-/* ==============================
-   Config & Defaults
-   ============================== */
+/* ============= Config & Defaults ============= */
 const DEFAULT_OPTIONS={
   audio:{sfx:0.7,music:0.4,mute:false},
-  gfx:{particles:true,shake:true,stars:'med',reduce:false},
-  gameplay:{difficulty:'normal',blast:30,speed:260}
+  gfx:{particles:true,shake:true,stars:'med',reduce:false,preview:true},
+  gameplay:{difficulty:'easy',blast:38,speed:320}
 };
 const DIFFICULTY={
-  easy:{spawn:0.85, speed:0.9, splitChance:0.06, wavesize:10, cities:6},
-  normal:{spawn:1.0, speed:1.0, splitChance:0.12, wavesize:12, cities:6},
-  hard:{spawn:1.15, speed:1.1, splitChance:0.18, wavesize:14, cities:5},
-  insane:{spawn:1.3, speed:1.2, splitChance:0.25, wavesize:16, cities:4},
+  easy:{spawn:0.65, speed:0.75, splitChance:0.03, wavesize:7, cities:7},
+  normal:{spawn:1.0,  speed:1.0,  splitChance:0.12, wavesize:12, cities:6},
+  hard:{spawn:1.15, speed:1.12, splitChance:0.18, wavesize:14, cities:5},
+  insane:{spawn:1.3,  speed:1.25, splitChance:0.25, wavesize:16, cities:4},
 };
 
-/* ==============================
-   Canvas & Background
-   ============================== */
+/* ============= Canvas & Background ============= */
 const BASE_W=480, BASE_H=270;
 const canvas=document.getElementById('game');
-const ctx=canvas.getContext('2d',{desynchronized:true}); // transparent
+const ctx=canvas.getContext('2d',{desynchronized:true});
 let DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
 function resizeCanvas(){
   DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
@@ -365,8 +362,6 @@ function paintBootBG(){
   grd.addColorStop(0,'#0b133a'); grd.addColorStop(1,'#081028');
   g.fillStyle=grd; g.fillRect(0,0,BASE_W,BASE_H);
 }
-
-/* Starfield */
 class Stars{
   constructor(d='med'){this.layers=[];this.setDensity(d);}
   setDensity(d){const base={low:50,med:100,high:160}[d]||100;
@@ -376,9 +371,7 @@ class Stars{
   draw(g){for(const L of this.layers){g.save();for(const s of L){g.fillStyle=s.c;g.globalAlpha=clamp(s.s/2.2,.3,.9);g.fillRect(s.x,s.y,s.s,s.s);}g.restore();}}
 }
 
-/* ==============================
-   Audio (simple synth)
-   ============================== */
+/* ============= Audio ============= */
 class AudioMgr{
   constructor(){this.ctx=null;this.master=null;this.music=null;this.sfxVol=.7;this.musicVol=.4;this.mute=false;}
   init(){if(this.ctx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
@@ -390,7 +383,6 @@ class AudioMgr{
   setVolumes(sfx,mus){this.sfxVol=sfx;this.musicVol=mus;if(this.music)this.music.gain.value=(this.mute?0:mus*0.28);}
   setMute(m){this.mute=!!m;if(this.music)this.music.gain.value=(this.mute?0:this.musicVol*0.28);}
   resume(){if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();}
-  /* one-shot beep helper */
   beep(freq=440,dur=.1,type='square',glideTo=null,color=0){
     if(!this.ctx||this.mute||this.sfxVol<=0)return; const t=this.ctx.currentTime;
     const o=this.ctx.createOscillator(); o.type=type; o.frequency.value=freq;
@@ -402,364 +394,396 @@ class AudioMgr{
   }
   launch(){this.beep(560,.08,'square',820,0);}
   boom(){this.beep(140,.35,'sawtooth',80,2);}
+  emp(){this.beep(520,.25,'sine',260,0);}
   hit(){this.beep(320,.08,'triangle',240,1);}
 }
 const Audio=new AudioMgr();
 
-/* ==============================
-   Entities
-   ============================== */
+/* ============= Entities ============= */
 class Entity{constructor(x,y,r){this.x=x;this.y=y;this.r=r;this.vx=0;this.vy=0;this.alive=true;}update(dt,game){}draw(g){}}
-const dist2=(a,b)=>{const dx=a.x-b.x,dy=a.y-b.y;return dx*dx+dy*dy;};
 
-/* Interceptor missile (travels to click, then explodes exactly there) */
+/* Interceptor: travels to click, then detonates at exact point */
 class Interceptor extends Entity{
-  constructor(x,y,tx,ty,speed,blast){
-    super(x,y,2); this.tx=tx; this.ty=ty; this.speed=speed; this.blast=blast; this.arrived=false;
-    const dx=tx-x,dy=ty-y; const d=Math.hypot(dx,dy)||1; this.vx=dx/d*speed; this.vy=dy/d*speed;
-  }
+  constructor(x,y,tx,ty,speed,blast){super(x,y,2); this.tx=tx; this.ty=ty; this.speed=speed; this.blast=blast; this.arrived=false; this.smoke=0;
+    const dx=tx-x,dy=ty-y,d=Math.hypot(dx,dy)||1; this.vx=dx/d*speed; this.vy=dy/d*speed;}
+  onArrive(game){ this.alive=false; game.explosions.push(new Explosion(this.tx,this.ty,this.blast)); }
   update(dt,game){
-    if(this.arrived){this.alive=false; game.explosions.push(new Explosion(this.tx,this.ty,this.blast)); return;}
+    if(this.arrived){ this.onArrive(game); return; }
     const nx=this.x+this.vx*dt, ny=this.y+this.vy*dt;
-    // arrival check: if we'd overshoot the target this frame, snap to it and detonate there
     const prevd=Math.hypot(this.tx-this.x,this.ty-this.y), newd=Math.hypot(this.tx-nx,this.ty-ny);
     if(newd>prevd){ this.x=this.tx; this.y=this.ty; this.arrived=true; return; }
     this.x=nx; this.y=ny;
+    if(game.opts.gfx.particles){ this.smoke-=dt; if(this.smoke<=0){ this.smoke=.035; game.parts.push(new Particle(this.x,this.y,rand(-8,8),rand(-8,8),.25,'#a8ecff')); } }
   }
-  draw(g){g.save(); g.shadowColor='#aef2ff'; g.shadowBlur=6; g.fillStyle='#d8fbff'; g.beginPath(); g.arc(this.x,this.y,2,0,PI*2); g.fill(); g.restore();}
+  draw(g){
+    g.save(); g.translate(this.x,this.y); const a=Math.atan2(this.vy,this.vx); g.rotate(a);
+    const grd=g.createLinearGradient(0,-4,0,6); grd.addColorStop(0,'#e6fbff'); grd.addColorStop(1,'#a8e9ff');
+    g.fillStyle=grd; g.shadowColor='#aef2ff'; g.shadowBlur=8;
+    g.beginPath(); g.moveTo(0,-4); g.lineTo(3,6); g.lineTo(-3,6); g.closePath(); g.fill();
+    g.restore();
+  }
 }
-
-/* Explosion grows then fades; kills threats inside radius */
+/* Cluster interceptor: spawns mini-bursts around click */
+class ClusterInterceptor extends Interceptor{
+  constructor(x,y,tx,ty,speed){ super(x,y,tx,ty,speed,0); }
+  onArrive(game){
+    this.alive=false;
+    const r=16;
+    for(let i=0;i<6;i++){
+      const ang=i*(PI*2/6)+rand(-0.1,0.1);
+      game.explosions.push(new Explosion(this.tx+Math.cos(ang)*r,this.ty+Math.sin(ang)*r,22));
+    }
+    Audio.boom();
+  }
+}
+/* Explosion: radial gradient + ring; grows then fades */
 class Explosion extends Entity{
-  constructor(x,y,maxR){super(x,y,maxR); this.t=0; this.life=.65; this.maxR=maxR;}
+  constructor(x,y,maxR){super(x,y,maxR); this.t=0; this.life=.7; this.maxR=maxR;}
   update(dt){this.t+=dt; if(this.t>this.life)this.alive=false;}
-  radius(){ const t=this.t/this.life; return (t<.35) ? lerp(0,this.maxR,t/.35) : lerp(this.maxR,this.maxR*0.6,(t-.35)/.65); }
-  draw(g){const r=this.radius(); g.save(); g.globalAlpha=.22; g.fillStyle='#c9f7ff'; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.fill(); g.globalAlpha=1; g.strokeStyle='#9fe6ff'; g.lineWidth=1; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.stroke(); g.restore();}
+  radius(){ const t=this.t/this.life; return (t<.35)? lerp(0,this.maxR,t/.35) : lerp(this.maxR,this.maxR*0.65,(t-.35)/.65); }
+  draw(g){
+    const r=this.radius();
+    const grad=g.createRadialGradient(this.x,this.y,Math.max(1,r*0.2),this.x,this.y,r);
+    grad.addColorStop(0,'rgba(210,245,255,0.35)');
+    grad.addColorStop(0.6,'rgba(210,245,255,0.18)');
+    grad.addColorStop(1,'rgba(210,245,255,0.02)');
+    g.save(); g.fillStyle=grad; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.fill();
+    g.strokeStyle='#c9f7ff'; g.globalAlpha=.9; g.lineWidth=1; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.stroke(); g.restore();
+  }
+}
+/* EMP field: freezes threats in radius for 3s */
+class EMPField extends Entity{
+  constructor(x,y,r){super(x,y,r); this.life=1.2; this.t=0; this.effect=3;}
+  update(dt,game){
+    this.t+=dt; if(this.t>this.life)this.alive=false;
+    // apply effect immediately (and while active if new threats enter)
+    for(const th of game.threats){ if(!th.alive) continue; const dx=th.x-this.x,dy=th.y-this.y; if(dx*dx+dy*dy<=this.r*this.r){ th.freeze=Math.max(th.freeze||0,this.effect); } }
+  }
+  draw(g){
+    const t=this.t/this.life; const r=lerp(this.r*0.7,this.r,Math.sin(t*PI)); g.save();
+    g.globalAlpha=.25; g.fillStyle='#baf7ff'; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.fill();
+    g.globalAlpha=1; g.strokeStyle='#7fe8ff'; g.setLineDash([4,3]); g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.stroke(); g.setLineDash([]);
+    g.restore();
+  }
+}
+/* Nuke shockwave: big explosion w/ longer life */
+class NukeExplosion extends Explosion{
+  constructor(x,y){ super(x,y,110); this.life=1.05; }
+  draw(g){
+    const r=this.radius();
+    const grad=g.createRadialGradient(this.x,this.y,Math.max(1,r*0.25),this.x,this.y,r);
+    grad.addColorStop(0,'rgba(255,180,240,0.35)');
+    grad.addColorStop(0.6,'rgba(255,180,240,0.18)');
+    grad.addColorStop(1,'rgba(255,180,240,0.03)');
+    g.save(); g.fillStyle=grad; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.fill();
+    g.strokeStyle='#ff9cf0'; g.globalAlpha=.9; g.lineWidth=1; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.stroke(); g.restore();
+  }
 }
 
-/* Incoming threat: meteor/warhead and MIRV */
+/* Threats: warhead/meteor/comet/armored (hp=2), MIRV split */
 class Threat extends Entity{
-  constructor(x,y,tx,ty,speed,type='warhead'){
-    super(x,y,2.5); this.tx=tx; this.ty=ty; this.type=type; this.speed=speed*(type==='meteor'?0.9:1); this.split=false; this.value=(type==='meteor'?60:100);
-    const dx=tx-x,dy=ty-y; const d=Math.hypot(dx,dy)||1; this.vx=dx/d*this.speed; this.vy=dy/d*this.speed;
-    this.trail=0; // particle timer
+  constructor(x,y,tx,ty,speed,type='warhead',hp=1){
+    super(x,y,3); this.tx=tx; this.ty=ty; this.type=type; this.baseSpeed=speed; this.speed=speed; this.hp=hp;
+    // random speed band per type (wider variance)
+    const bands={warhead:[0.85,1.35], meteor:[0.7,1.05], comet:[1.25,1.8], armored:[0.85,1.2]};
+    const b=bands[type]||[0.9,1.2]; this.speed*=rand(b[0],b[1]);
+    const dx=tx-x,dy=ty-y,d=Math.hypot(dx,dy)||1; this.vx=dx/d*this.speed; this.vy=dy/d*this.speed;
+    this.trail=0; this.spin=rand(-1,1); this.rot=rand(0,PI*2); this.freeze=0; this.value={meteor:60,warhead:100,comet:140,armored:160}[type]||100;
+    // meteor polygon roughness
+    if(type==='meteor'){ const pts=[]; const n=randi(5,7); const R=7; for(let i=0;i<n;i++){ const a=i*2*PI/n+rand(-0.2,0.2); pts.push({x:Math.cos(a)*(R+rand(-2,2)),y:Math.sin(a)*(R+rand(-2,2))}); } this.poly=pts; }
   }
   update(dt,game){
-    this.x+=this.vx*dt; this.y+=this.vy*dt;
-    if(game.opts.gfx.particles){ this.trail-=dt; if(this.trail<=0){ this.trail=.03; game.parts.push(new Particle(this.x,this.y,rand(-8,8),rand(-8,8),.25,'#ffcfcc')); } }
-    // Splitter logic (MIRV)
-    if(!this.split && this.type==='warhead' && game.wave>2 && Math.random()<0.002*game.diff.spawn){
-      if(Math.random()<game.diff.splitChance && this.y>50 && this.y<BASE_H*0.55){
-        this.split=true;
-        const children=randi(2,3);
-        for(let i=0;i<children;i++){
-          const cty=game.groundY-4, ctx=(game.randomCityX());
-          game.threats.push(new Threat(this.x,this.y,ctx,cty,this.speed*1.05,'warhead'));
-        }
-      }
+    // freeze handling
+    const f=this.freeze>0 ? 0.12 : 1; if(this.freeze>0) this.freeze-=dt;
+    this.x+=this.vx*dt*f; this.y+=this.vy*dt*f;
+    this.rot+=this.spin*dt*(this.type==='meteor'?1:0.5);
+    if(game.opts.gfx.particles){ this.trail-=dt; if(this.trail<=0){ this.trail=.028;
+      const col=this.type==='meteor'?'#ffcfcc':'#ffeade';
+      game.parts.push(new Particle(this.x,this.y,rand(-10,10),rand(-10,10),.22,col)); } }
+    // MIRV split (warhead types only)
+    if(this.type==='warhead' && this.y>50 && this.y<BASE_H*0.55 && Math.random()<0.002*game.diff.spawn){
+      if(Math.random()<game.diff.splitChance){ for(let i=0;i<randi(2,3);i++){ const ctx=game.randomCityX(), cty=game.groundY-2; game.threats.push(new Threat(this.x,this.y,ctx,cty,this.baseSpeed*1.05,'warhead',1)); } this.alive=false; }
     }
-    // Reached ground?
-    if(this.y >= game.groundY-2){
-      this.alive=false;
-      game.onImpact(this.x);
-    }
+    if(this.y>=game.groundY-2){ this.alive=false; game.onImpact(this.x); }
   }
-  draw(g){g.save(); g.shadowColor=this.type==='meteor'?'#ff9b7b':'#ffd1d1'; g.shadowBlur=6; g.fillStyle=this.type==='meteor'?'#ffd1b3':'#ffe3e3'; g.beginPath(); g.arc(this.x,this.y,this.r,0,PI*2); g.fill(); g.restore();}
+  draw(g){
+    g.save(); g.translate(this.x,this.y);
+    const a=Math.atan2(this.vy,this.vx);
+    if(this.type==='meteor'){
+      g.rotate(this.rot);
+      const rg=g.createRadialGradient(0,0,1,0,0,8); rg.addColorStop(0,'#ffd7b8'); rg.addColorStop(1,'#e49162');
+      g.fillStyle=rg; g.shadowColor='#ffb794'; g.shadowBlur=6;
+      g.beginPath(); g.moveTo(this.poly[0].x,this.poly[0].y); for(let i=1;i<this.poly.length;i++) g.lineTo(this.poly[i].x,this.poly[i].y); g.closePath(); g.fill();
+    }else{
+      // tail
+      g.rotate(a); const tail=Math.min(18, Math.max(8, this.speed*0.12));
+      const lg=g.createLinearGradient(0,0,-tail,0); lg.addColorStop(0,'rgba(255,230,220,0.9)'); lg.addColorStop(1,'rgba(255,230,220,0)');
+      g.fillStyle=lg; g.beginPath(); g.moveTo(-tail,-1.2); g.lineTo(0,-0.2); g.lineTo(0,0.2); g.lineTo(-tail,1.2); g.closePath(); g.fill();
+      // body
+      const body=g.createLinearGradient(0,-3,0,3); body.addColorStop(0,'#fff5f1'); body.addColorStop(1,'#c3cfe6');
+      g.fillStyle=body; g.shadowColor='#ffe3dd'; g.shadowBlur=6;
+      g.beginPath(); g.moveTo(4,0); g.quadraticCurveTo(2.5,-2,0,-3); g.lineTo(-1.5,-3); g.lineTo(-1.5,3); g.lineTo(0,3); g.quadraticCurveTo(2.5,2,4,0); g.closePath(); g.fill();
+      if(this.type==='armored'){ g.strokeStyle='#a8b8ff'; g.lineWidth=1; g.beginPath(); g.arc(0,0,3,0,PI*2); g.stroke(); }
+    }
+    g.restore();
+  }
 }
 
-/* Fluff particle */
+/* FX particle */
 class Particle extends Entity{
   constructor(x,y,vx,vy,life,color){super(x,y,1.5); this.vx=vx; this.vy=vy; this.life=life; this.t=life; this.color=color;}
-  update(dt){this.x+=this.vx*dt; this.y+=this.vy*dt; this.vx*=.98; this.vy*=.98; this.t-=dt; if(this.t<=0)this.alive=false;}
+  update(dt){this.x+=this.vx*dt; this.y+=this.vy*dt; this.vx*=.985; this.vy*=.985; this.t-=dt; if(this.t<=0)this.alive=false;}
   draw(g){const a=clamp(this.t/this.life,0,1); g.save(); g.globalAlpha=a; g.fillStyle=this.color; g.fillRect(this.x,this.y,2,2); g.restore();}
 }
 
-/* ==============================
-   Game
-   ============================== */
+/* ============= Game Core ============= */
 class Game{
   constructor(options){
     this.opts=options; this.stars=new Stars(this.opts.gfx.stars);
-    this.interceptors=[]; this.explosions=[]; this.threats=[]; this.parts=[];
-    this.wave=1; this.score=0;
-    this.diff=DIFFICULTY[this.opts.gameplay.difficulty]||DIFFICULTY.normal;
+    this.interceptors=[]; this.explosions=[]; this.threats=[]; this.fields=[]; this.parts=[];
+    this.wave=1; this.score=0; this.chain=0; this.chainTimer=0;
+    this.diff=DIFFICULTY[this.opts.gameplay.difficulty]||DIFFICULTY.easy;
     this.groundY=BASE_H-24;
     this.cities=[]; this.resetCities();
-    this.launchCD=0; // fire rate limiting
-    this.running=false; this.paused=false; this.last=performance.now(); this.accum=0;
-    this.saved=null;
-    // mouse tracking for reticle
+    this.launchCD=0; this.running=false; this.paused=false; this.last=performance.now(); this.accum=0; this.saved=null;
     this.cursor={x:BASE_W/2,y:BASE_H/3};
+    // specials/ammo
+    this.weapon=0; // 0 Std, 1 Cluster, 2 EMP, 3 Nuke
+    this.ammo={cluster:3, emp:1, nuke:0};
+    this.weaponBoxes=[]; // HUD hitboxes
   }
-  resetCities(){
-    this.cities=[];
-    const count=this.diff.cities;
-    const margin=40, span=BASE_W-margin*2, step=span/(count-1);
-    for(let i=0;i<count;i++){
-      const x=margin+i*step, y=this.groundY-2;
-      this.cities.push({x,y,alive:true});
-    }
-  }
-  randomCityX(){
-    const alive=this.cities.filter(c=>c.alive);
-    if (!alive.length) return BASE_W/2;
-    return alive[randi(0,alive.length-1)].x;
-  }
+  resetCities(){ this.cities=[]; const count=this.diff.cities; const margin=36, span=BASE_W-margin*2, step=span/(count-1);
+    for(let i=0;i<count;i++){ const x=margin+i*step, y=this.groundY-2; this.cities.push({x,y,alive:true}); } }
+  randomCityX(){ const alive=this.cities.filter(c=>c.alive); return alive.length? alive[randi(0,alive.length-1)].x : BASE_W/2; }
   start(newGame=true){
     if(newGame){
-      this.interceptors.length=0; this.explosions.length=0; this.threats.length=0; this.parts.length=0;
-      this.wave=1; this.score=0; this.resetCities();
+      this.interceptors.length=0; this.explosions.length=0; this.threats.length=0; this.parts.length=0; this.fields.length=0;
+      this.wave=1; this.score=0; this.chain=0; this.chainTimer=0; this.resetCities();
+      this.ammo={cluster:3, emp: (this.opts.gameplay.difficulty==='easy'?1:1), nuke:0};
     }else if(this.saved){ Object.assign(this,this.saved); this.stars.setDensity(this.opts.gfx.stars); }
     this.running=true; this.paused=false; this.last=performance.now(); this.accum=0;
     this.spawnWave(this.wave);
   }
-  saveSnapshot(){
-    const snap={opts:this.opts, wave:this.wave, score:this.score, cities:this.cities};
-    Store.set('ab_save',snap);
-  }
+  saveSnapshot(){ const snap={opts:this.opts,wave:this.wave,score:this.score,cities:this.cities,ammo:this.ammo}; Store.set('ab_save',snap); }
   hasSave(){ return !!Store.get('ab_save',null); }
-  loadSave(){ this.saved=Store.get('ab_save',null); }
+  loadSave(){ this.saved=Store.get('ab_save',null); if(this.saved&&this.saved.ammo) this.ammo=this.saved.ammo; }
   clearSave(){ Store.del('ab_save'); }
 
   spawnWave(n){
-    const base= this.diff.wavesize + Math.floor((n-1)*2);
+    const base=this.diff.wavesize + Math.floor((n-1)*2);
     const total=base;
-    const speedBase = (85 + n*5) * this.diff.speed;
+    const speedBase=(78 + n*5) * this.diff.speed;
+    const patterns=['spray','rain','clump'][n%3];
     for(let i=0;i<total;i++){
-      const delay = i * (0.75/this.diff.spawn);
-      setTimeout(()=>{ if(!this.running) return; this.spawnThreat(speedBase); }, delay*1000);
+      const delay=i * (patterns==='rain'? 0.65/this.diff.spawn : 0.78/this.diff.spawn);
+      setTimeout(()=>{ if(!this.running) return; this.spawnThreat(speedBase,patterns); }, delay*1000);
     }
+    toast(`Wave ${n}`);
   }
-  spawnThreat(speedBase){
-    const sx=rand(20,BASE_W-20), sy=-10;
-    const tx=this.randomCityX(), ty=this.groundY-2;
-    const type = Math.random()<0.35 ? 'meteor' : 'warhead';
-    const t=new Threat(sx,sy,tx,ty,rand(speedBase*0.9,speedBase*1.1),type);
-    this.threats.push(t);
+  spawnThreat(speedBase,pattern){
+    const ty=this.groundY-2;
+    let sx,tx; 
+    if(pattern==='spray'){ sx=rand(10,BASE_W-10); tx=this.randomCityX(); }
+    else if(pattern==='clump'){ const cx=rand(60,BASE_W-60); sx=clamp(cx+rand(-30,30),10,BASE_W-10); tx=cx; }
+    else /*rain*/ { sx=rand(20,BASE_W-20); tx=this.randomCityX(); }
+    // choose type with small chance of comet/armored
+    let t='warhead'; const p=Math.random();
+    if (p<0.18) t='meteor'; else if (p>0.88 && this.wave>2) t='comet'; else if (p>0.75 && this.wave>4) t='armored';
+    const hp=(t==='armored')?2:1;
+    const sp=rand(speedBase*0.85,speedBase*1.15); // base variation
+    const threat=new Threat(sx,-10,tx,ty,sp,t,hp);
+    this.threats.push(threat);
   }
+
   fireAt(x,y){
-    if (!this.running || this.paused) return;
-    if (y >= this.groundY-10) return; // prevent waste detonations underground
-    if (this.launchCD>0) return;
-    const speed=this.opts.gameplay.speed;
-    const blast=this.opts.gameplay.blast;
-    const turretX=BASE_W/2, turretY=this.groundY-4;
-    this.interceptors.push(new Interceptor(turretX,turretY,x,y,speed,blast));
-    this.launchCD=0.18;
-    Audio.launch();
+    if(!this.running||this.paused) return;
+    // weapon bar click hit-test
+    if(this.trySelectWeaponUI(x,y)) return;
+    if(y>=this.groundY-10) return;
+    if(this.launchCD>0) return;
+    const speed=this.opts.gameplay.speed, turretX=BASE_W/2, turretY=this.groundY-4;
+    if(this.weapon===0){ this.interceptors.push(new Interceptor(turretX,turretY,x,y,speed,this.opts.gameplay.blast)); Audio.launch(); this.launchCD=.17; }
+    else if(this.weapon===1){ if(this.ammo.cluster>0){ this.interceptors.push(new ClusterInterceptor(turretX,turretY,x,y,speed)); this.ammo.cluster--; Audio.launch(); this.launchCD=.22; } else { toast('No Cluster'); } }
+    else if(this.weapon===2){ if(this.ammo.emp>0){ this.fields.push(new EMPField(x,y,48)); this.ammo.emp--; Audio.emp(); this.launchCD=.25; } else { toast('No EMP'); } }
+    else if(this.weapon===3){ if(this.ammo.nuke>0){ this.explosions.push(new NukeExplosion(x,y)); this.ammo.nuke--; Audio.boom(); this.launchCD=.35; } else { toast('No Nuke'); } }
   }
+
   onImpact(x){
-    // Damage nearest city in radius 26, otherwise cosmetic crater
-    const radius=26;
-    let hit=false;
-    for(const c of this.cities){
-      if (!c.alive) continue;
-      if (Math.abs(c.x - x) < radius){
-        c.alive=false; hit=true;
-        this.spawnExplosion(c.x,this.groundY-6,'#ffd0a0');
-        if(this.opts.gfx.shake) this.shake(8,.45);
-        Audio.hit();
-      }
-    }
-    // General ground puff
+    const radius=26; let hit=false;
+    for(const c of this.cities){ if(!c.alive) continue; if(Math.abs(c.x-x)<radius){ c.alive=false; hit=true; this.spawnExplosion(c.x,this.groundY-6,'#ffd0a0'); if(this.opts.gfx.shake) this.shake(8,.45); Audio.hit(); } }
     this.spawnExplosion(x,this.groundY-4,'#ffd0a0');
     if(!hit && this.opts.gfx.shake) this.shake(5,.25);
-    // Lose when all cities gone
-    if (!this.cities.some(c=>c.alive)) this.endGame();
+    if(!this.cities.some(c=>c.alive)) this.endGame();
   }
-  spawnExplosion(x,y,color='#ffd8a0'){
-    if(this.opts.gfx.particles){
-      for(let i=0;i<18;i++){
-        const a=rand(0,PI*2), s=rand(40,120);
-        this.parts.push(new Particle(x,y,Math.cos(a)*s,Math.sin(a)*s,rand(.3,.6),color));
-      }
-    }
-  }
+  spawnExplosion(x,y,color='#ffd8a0'){ if(this.opts.gfx.particles){ for(let i=0;i<18;i++){ const a=rand(0,PI*2), s=rand(40,120); this.parts.push(new Particle(x,y,Math.cos(a)*s,Math.sin(a)*s,rand(.3,.6),color)); } } }
+
+  addScore(v){ const mult = 1 + Math.min(4, this.chain*0.15); this.score += Math.round(v*mult); }
+  onKill(th){ this.chainTimer=1.0; this.chain+=1; this.addScore(th.value); if(this.chain%5===0) toast(`Chain x${this.chain}`); }
+
   update(dt){
     this.stars.update(dt*(this.opts.gfx.reduce?0.5:1));
     if (!this.running || this.paused) return;
     this.launchCD=Math.max(0,this.launchCD-dt);
+    if(this.chainTimer>0){ this.chainTimer-=dt; if(this.chainTimer<=0) this.chain=0; }
 
-    // entities
-    for(const a of [this.interceptors,this.explosions,this.threats,this.parts]) for(const o of a) if (o.alive) o.update(dt,this);
+    for(const a of [this.interceptors,this.explosions,this.fields,this.threats,this.parts]) for(const o of a) if(o.alive) o.update(dt,this);
 
-    // collisions: explosion vs threat
+    // explosions vs threats
     for(const ex of this.explosions){
-      if (!ex.alive) continue;
-      const r=ex.radius(); const r2=r*r;
-      for(const t of this.threats){
-        if (!t.alive) continue;
-        if ( (t.x-ex.x)*(t.x-ex.x) + (t.y-ex.y)*(t.y-ex.y) <= r2 ){
-          t.alive=false; this.score += t.value; this.spawnExplosion(t.x,t.y);
-          Audio.boom();
-        }
-      }
+      if(!ex.alive) continue; const r=ex.radius(); const r2=r*r;
+      for(const t of this.threats){ if(!t.alive) continue; const dx=t.x-ex.x, dy=t.y-ex.y; if(dx*dx+dy*dy<=r2){ t.hp-=1; if(t.hp<=0){ t.alive=false; this.spawnExplosion(t.x,t.y); Audio.boom(); this.onKill(t); } } }
     }
 
     // cleanup
     this.interceptors=this.interceptors.filter(o=>o.alive);
     this.explosions=this.explosions.filter(o=>o.alive);
+    this.fields=this.fields.filter(o=>o.alive);
     this.threats=this.threats.filter(o=>o.alive);
     this.parts=this.parts.filter(o=>o.alive);
 
-    // wave progression: when no threats left and no interceptors/explosions, start next wave
+    // next wave when clear
     if(this.threats.length===0 && this.interceptors.length===0 && this.explosions.length===0 && this.cities.some(c=>c.alive)){
-      // bonus for surviving cities
-      const aliveCount=this.cities.filter(c=>c.alive).length;
-      this.score += aliveCount*50;
-      toast(`Wave ${this.wave} cleared! +${aliveCount*50} bonus`);
-      this.wave+=1;
-      this.spawnWave(this.wave);
+      const alive=this.cities.filter(c=>c.alive).length;
+      this.score += alive*60; toast(`Wave ${this.wave} cleared! +${alive*60}`);
+      // award specials
+      this.ammo.cluster += 1;
+      if(this.wave%3===0) this.ammo.emp += 1;
+      if(this.wave%5===0 && alive>=Math.ceil(this.cities.length/2)) this.ammo.nuke += 1;
+      this.wave+=1; this.spawnWave(this.wave);
     }
   }
+
   draw(g){
-    // background
+    // background + stars
     g.save();
     const bg=g.createLinearGradient(0,0,0,BASE_H); bg.addColorStop(0,'#0b133a'); bg.addColorStop(1,'#081028'); g.fillStyle=bg; g.fillRect(0,0,BASE_W,BASE_H);
     this.stars.draw(g);
 
-    // asteroid ground
-    g.save();
-    g.translate(BASE_W/2,this.groundY+28);
+    // asteroid horizon
+    g.save(); g.translate(BASE_W/2,this.groundY+28);
     g.fillStyle='#0b162f'; g.beginPath(); g.ellipse(0,0,BASE_W*0.6,42,0,0,PI); g.fill();
-    // crust line
-    g.strokeStyle='#24356c'; g.lineWidth=2; g.beginPath(); g.ellipse(0,-2,BASE_W*0.6,40,0,0,PI); g.stroke();
-    g.restore();
+    g.strokeStyle='#24356c'; g.lineWidth=2; g.beginPath(); g.ellipse(0,-2,BASE_W*0.6,40,0,0,PI); g.stroke(); g.restore();
 
-    // cities (domes)
+    // cities
     for(const c of this.cities){
       g.save(); g.translate(c.x,this.groundY-1);
-      if (c.alive){
-        g.fillStyle='#a8e7ff'; g.globalAlpha=.2; g.beginPath(); g.arc(0,0,9,PI,0); g.lineTo(0,0); g.closePath(); g.fill();
-        g.globalAlpha=1; g.fillStyle='#cfe9ff'; g.fillRect(-7,0,14,2);
-      }else{
-        g.fillStyle='#364066'; g.fillRect(-8,0,16,2);
-      }
+      if (c.alive){ g.fillStyle='#a8e7ff'; g.globalAlpha=.22; g.beginPath(); g.arc(0,0,9,PI,0); g.lineTo(0,0); g.closePath(); g.fill(); g.globalAlpha=1; g.fillStyle='#cfe9ff'; g.fillRect(-7,0,14,2); }
+      else{ g.fillStyle='#364066'; g.fillRect(-8,0,16,2); }
       g.restore();
     }
 
-    // turret (center launcher)
-    g.save();
-    g.translate(BASE_W/2,this.groundY-4);
+    // turret
+    g.save(); g.translate(BASE_W/2,this.groundY-4);
     g.fillStyle='#98b7ff'; g.fillRect(-6,0,12,4);
-    // barrel aim reticle
     const ang=Math.atan2(this.cursor.y-(this.groundY-4), this.cursor.x-BASE_W/2);
-    g.rotate(ang); g.fillStyle='#c7ddff'; g.fillRect(2,-1,12,2);
-    g.restore();
+    g.rotate(ang); g.fillStyle='#c7ddff'; g.fillRect(2,-1,12,2); g.restore();
 
     // entities
     for(const p of this.parts) p.draw(g);
     for(const t of this.threats) t.draw(g);
     for(const m of this.interceptors) m.draw(g);
     for(const e of this.explosions) e.draw(g);
+    for(const f of this.fields) f.draw(g);
 
-    // HUD
+    // HUD: score, wave, cities
     g.fillStyle='#d6e5ff'; g.font='bold 12px system-ui, sans-serif'; g.textAlign='left'; g.textBaseline='top';
     g.fillText(`Score: ${this.score}`,6,6);
     g.fillText(`Wave: ${this.wave}`,6,22);
     const alive=this.cities.filter(c=>c.alive).length;
     g.fillText(`Cities: ${alive}/${this.cities.length}`,6,38);
+    if (this.chain>1){ g.fillStyle='#ffd84d'; g.fillText(`Chain x${this.chain}`,6,54); }
 
-    // crosshair at cursor
-    const cx=this.cursor.x, cy=this.cursor.y;
-    g.strokeStyle='#6fe1ff'; g.lineWidth=1; g.beginPath();
-    g.moveTo(cx-6,cy); g.lineTo(cx-2,cy);
-    g.moveTo(cx+6,cy); g.lineTo(cx+2,cy);
-    g.moveTo(cx,cy-6); g.lineTo(cx,cy-2);
-    g.moveTo(cx,cy+6); g.lineTo(cx,cy+2);
-    g.stroke();
-
-    if (this.paused){
-      g.textAlign='center'; g.fillStyle='#b8c5ff'; g.fillText('PAUSED', BASE_W/2, BASE_H/2 - 40);
+    // Weapon bar (bottom)
+    this.weaponBoxes.length=0;
+    const y=BASE_H-16, w=28, h=12, pad=8, startX=(BASE_W - (w*4 + pad*3))/2;
+    const labels=['STD','C','E','N'];
+    for(let i=0;i<4;i++){
+      const x=startX+i*(w+pad);
+      g.strokeStyle='#3a4ca0'; g.lineWidth=1; g.strokeRect(x,y,w,h);
+      if(i===this.weapon){ g.fillStyle='rgba(111,225,255,0.15)'; g.fillRect(x,y,w,h); }
+      g.fillStyle='#bcd5ff'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(labels[i],x+w/2,y+h/2);
+      if(i===1){ g.fillText(String(this.ammo.cluster),x+w+8,y+h/2); }
+      if(i===2){ g.fillText(String(this.ammo.emp),x+w+8,y+h/2); }
+      if(i===3){ g.fillText(String(this.ammo.nuke),x+w+8,y+h/2); }
+      this.weaponBoxes.push({x,y,w,h,i});
     }
 
+    // Aim preview (selected weapon radius)
+    if(this.opts.gfx.preview && this.cursor.y<this.groundY-8){
+      const r= (this.weapon===0? this.opts.gameplay.blast : this.weapon===1? 22 : this.weapon===2? 48 : 110);
+      g.strokeStyle=this.weapon===3?'#ff9cf0':this.weapon===2?'#7fe8ff':'#6fe1ff';
+      g.globalAlpha=.8; g.lineWidth=1; g.beginPath(); g.arc(this.cursor.x,this.cursor.y,r,0,PI*2); g.stroke();
+      g.globalAlpha=1;
+    }
+
+    if (this.paused){ g.textAlign='center'; g.fillStyle='#b8c5ff'; g.fillText('PAUSED', BASE_W/2, BASE_H/2 - 40); }
     g.restore();
   }
-  shakeAmp=0; shakeTime=0;
-  shake(a,d){ this.shakeAmp=Math.max(this.shakeAmp,a); this.shakeTime=Math.max(this.shakeTime,d); }
-  applyShake(g){ if (this.shakeTime>0){ this.shakeTime-=1/60; g.translate(rand(-this.shakeAmp,this.shakeAmp), rand(-this.shakeAmp,this.shakeAmp)); } }
+
+  trySelectWeaponUI(x,y){
+    for(const b of this.weaponBoxes){ if (x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h){ this.weapon=b.i; return true; } }
+    return false;
+  }
+
+  shakeAmp=0; shakeTime=0; applyShake(g){ if(this.shakeTime>0){ this.shakeTime-=1/60; g.translate(rand(-this.shakeAmp,this.shakeAmp), rand(-this.shakeAmp,this.shakeAmp)); } }
+  shake(a,d){ if(!this.opts.gfx.shake) return; this.shakeAmp=Math.max(this.shakeAmp,a); this.shakeTime=Math.max(this.shakeTime,d); }
   togglePause(showOverlay=false){ this.paused=!this.paused; document.getElementById('pauseOverlay').hidden = !this.paused || !showOverlay; }
   endGame(){
     this.running=false; this.paused=false;
     document.getElementById('finalScore').textContent=this.score.toString();
     document.getElementById('finalWave').textContent=Math.max(this.wave,1).toString();
     document.getElementById('finalCities').textContent=this.cities.filter(c=>c.alive).length.toString();
-    document.getElementById('gameOverOverlay').hidden=false;
-    this.clearSave();
+    document.getElementById('gameOverOverlay').hidden=false; this.clearSave();
   }
 }
 
-/* ==============================
-   Loop (fixed timestep)
-   ============================== */
+/* ============= Loop ============= */
 const gameState={game:null}; let rafId=0;
 function gameLoop(ts){
   const g=gameState.game; if(!g){ rafId=requestAnimationFrame(gameLoop); return; }
   let dt=(ts-g.last)/1000; if(dt>0.1) dt=0.1; g.last=ts; const step=1/60; g.accum+=dt;
   while(g.accum>=step){ g.update(step); g.accum-=step; }
-  ctx.save();
-  ctx.clearRect(0,0,BASE_W,BASE_H);
-  if (g.shakeTime>0){ g.applyShake(ctx); }
-  g.draw(ctx);
-  ctx.restore();
+  ctx.save(); ctx.clearRect(0,0,BASE_W,BASE_H); if (g.shakeTime>0){ g.applyShake(ctx); } g.draw(ctx); ctx.restore();
   rafId=requestAnimationFrame(gameLoop);
 }
 
-/* ==============================
-   UI & Controls
-   ============================== */
+/* ============= UI & Controls ============= */
 const $=sel=>document.querySelector(sel);
 const panels={menu:$('#menu'),options:$('#options'),how:$('#how'),leader:$('#leader'),credits:$('#credits')};
 function showPanel(name){ for(const [k,el] of Object.entries(panels)){ if(!el)continue; if(k===name) el.classList.add('visible'); else el.classList.remove('visible'); } }
 function hideAllPanels(){ for(const el of Object.values(panels)) el.classList.remove('visible'); }
 
 function refreshMenuStatus(){
-  const save=Store.get('ab_save',null);
-  $('#saveStatus').textContent=save?'Available':'None';
-  $('#continueBtn').disabled=!save;
-  const hi=Store.get('ab_scores',[]).sort((a,b)=>b.score-a.score)[0]?.score||0;
-  $('#hiStatus').textContent=hi.toString();
+  const save=Store.get('ab_save',null); $('#saveStatus').textContent=save?'Available':'None'; $('#continueBtn').disabled=!save;
+  const hi=Store.get('ab_scores',[]).sort((a,b)=>b.score-a.score)[0]?.score||0; $('#hiStatus').textContent=hi.toString();
 }
 function populateLeaderboard(){
-  const list=$('#leaderList'); list.innerHTML='';
-  const scores=Store.get('ab_scores',[]).sort((a,b)=>b.score-a.score).slice(0,10);
+  const list=$('#leaderList'); list.innerHTML=''; const scores=Store.get('ab_scores',[]).sort((a,b)=>b.score-a.score).slice(0,10);
   if(!scores.length){ const li=document.createElement('li'); li.innerHTML='<span>No scores yet</span><span class="badge">Play a game!</span>'; list.appendChild(li); return; }
   scores.forEach((s,i)=>{ const li=document.createElement('li'); li.innerHTML=`<span>#${i+1} ${s.name||'Defender'}</span><span>${s.score}</span>`; list.appendChild(li); });
 }
-
 function toast(msg){
-  const wrap=document.getElementById('tinyToasts');
-  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
-  wrap.appendChild(el); requestAnimationFrame(()=>el.classList.add('show'));
-  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),250); }, 1600);
+  const wrap=document.getElementById('tinyToasts'); const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  wrap.appendChild(el); requestAnimationFrame(()=>el.classList.add('show')); setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),250); }, 1600);
 }
 
-/* Options UI binding */
+/* Options bind */
 function applyOptionsToUI(opt){
   $('#sfxVol').value=Math.round(opt.audio.sfx*100);
   $('#musVol').value=Math.round(opt.audio.music*100);
   $('#sfxVolLbl').textContent=Math.round(opt.audio.sfx*100)+'%';
   $('#musVolLbl').textContent=Math.round(opt.audio.music*100)+'%';
   $('#muteAll').checked=!!opt.audio.mute;
-
-  $('#optParticles').checked=!!opt.gfx.particles;
-  $('#optShake').checked=!!opt.gfx.shake;
-  $('#optStars').value=opt.gfx.stars;
-  $('#optReduce').checked=!!opt.gfx.reduce;
-
-  $('#optDifficulty').value=opt.gameplay.difficulty;
-  $('#optBlast').value=opt.gameplay.blast;
-  $('#optSpeed').value=opt.gameplay.speed;
+  $('#optParticles').checked=!!opt.gfx.particles; $('#optShake').checked=!!opt.gfx.shake; $('#optStars').value=opt.gfx.stars; $('#optReduce').checked=!!opt.gfx.reduce; $('#optPreview').checked=!!opt.gfx.preview;
+  $('#optDifficulty').value=opt.gameplay.difficulty; $('#optBlast').value=opt.gameplay.blast; $('#optSpeed').value=opt.gameplay.speed;
 }
 function readOptionsFromUI(){
   const g=gameState.game, opt=g.opts;
   opt.audio.sfx=+$('#sfxVol').value/100; opt.audio.music=+$('#musVol').value/100; opt.audio.mute=$('#muteAll').checked;
-  opt.gfx.particles=$('#optParticles').checked; opt.gfx.shake=$('#optShake').checked; opt.gfx.stars=$('#optStars').value; opt.gfx.reduce=$('#optReduce').checked;
+  opt.gfx.particles=$('#optParticles').checked; opt.gfx.shake=$('#optShake').checked; opt.gfx.stars=$('#optStars').value; opt.gfx.reduce=$('#optReduce').checked; opt.gfx.preview=$('#optPreview').checked;
   opt.gameplay.difficulty=$('#optDifficulty').value; opt.gameplay.blast=+$('#optBlast').value; opt.gameplay.speed=+$('#optSpeed').value;
-
   Store.set('ab_options',opt); Audio.setVolumes(opt.audio.sfx,opt.audio.music); Audio.setMute(opt.audio.mute);
-  g.stars.setDensity(opt.gfx.stars);
-  g.diff=DIFFICULTY[opt.gameplay.difficulty]||DIFFICULTY.normal;
+  g.stars.setDensity(opt.gfx.stars); g.diff=DIFFICULTY[opt.gameplay.difficulty]||DIFFICULTY.easy;
   toast('Options saved');
 }
 $('#sfxVol').addEventListener('input', e=>$('#sfxVolLbl').textContent=e.target.value+'%');
@@ -785,8 +809,7 @@ $('#creditsBack').addEventListener('click', ()=>showPanel('menu'));
 $('#resumeBtn').addEventListener('click', ()=>{ gameState.game.togglePause(); $('#pauseOverlay').hidden=true; });
 $('#restartBtn').addEventListener('click', ()=>{ $('#pauseOverlay').hidden=true; gameState.game.start(true); });
 $('#toMenuBtn').addEventListener('click', ()=>{
-  $('#pauseOverlay').hidden=true; gameState.game.running=false; showPanel('menu');
-  gameState.game.saveSnapshot(); refreshMenuStatus();
+  $('#pauseOverlay').hidden=true; gameState.game.running=false; showPanel('menu'); gameState.game.saveSnapshot(); refreshMenuStatus();
 });
 $('#gameOverMenuBtn').addEventListener('click', ()=>{ $('#gameOverOverlay').hidden=true; showPanel('menu'); refreshMenuStatus(); });
 $('#saveScoreBtn').addEventListener('click', ()=>{
@@ -796,49 +819,34 @@ $('#saveScoreBtn').addEventListener('click', ()=>{
 });
 
 /* Input / firing */
-function eventToCanvas(e){
-  const rect=canvas.getBoundingClientRect();
-  const x=(e.clientX-rect.left)*BASE_W/rect.width;
-  const y=(e.clientY-rect.top)*BASE_H/rect.height;
-  return {x:clamp(x,0,BASE_W), y:clamp(y,0,BASE_H)};
-}
-function handleFire(e){
-  const g=gameState.game; if(!g||!g.running||g.paused) return;
-  const p=eventToCanvas(e); g.cursor=p; g.fireAt(p.x,p.y);
-}
+function eventToCanvas(e){ const r=canvas.getBoundingClientRect(); const x=(e.clientX-r.left)*BASE_W/r.width, y=(e.clientY-r.top)*BASE_H/r.height; return {x:clamp(x,0,BASE_W), y:clamp(y,0,BASE_H)}; }
+function handleFire(e){ const g=gameState.game; if(!g||!g.running||g.paused) return; const p=eventToCanvas(e); g.cursor=p; g.fireAt(p.x,p.y); }
 canvas.addEventListener('pointerdown', handleFire);
-/* Also catch clicks through UI root when no panel is visible */
-document.getElementById('ui').addEventListener('pointerdown', (e)=>{
-  // if a visible panel exists, ignore (so menus still clickable)
-  const anyVisible = Object.values(panels).some(el=>el.classList.contains('visible'));
-  const overlays = !document.getElementById('pauseOverlay').hidden || !document.getElementById('gameOverOverlay').hidden;
-  if (anyVisible || overlays) return;
-  handleFire(e);
-});
+document.getElementById('ui').addEventListener('pointerdown', (e)=>{ const anyVisible=Object.values(panels).some(el=>el.classList.contains('visible')); const overlays=!document.getElementById('pauseOverlay').hidden || !document.getElementById('gameOverOverlay').hidden; if(anyVisible||overlays) return; handleFire(e); });
 canvas.addEventListener('pointermove', (e)=>{ const g=gameState.game; if(!g) return; g.cursor=eventToCanvas(e); });
+
+/* Keyboard */
+window.addEventListener('keydown', (e)=>{
+  const g=gameState.game; if(!g) return;
+  if(e.code==='Escape' && g.running){ e.preventDefault(); g.togglePause(true); }
+  if(e.code==='KeyF'){ e.preventDefault(); const doc=document, el=document.documentElement; if(!doc.fullscreenElement){ el.requestFullscreen?.().catch(()=>{}); } else { doc.exitFullscreen?.(); } }
+  if(e.code==='KeyM'){ e.preventDefault(); g.opts.audio.mute=!g.opts.audio.mute; Audio.setMute(g.opts.audio.mute); }
+  if(e.code==='Digit1') g.weapon=0;
+  if(e.code==='Digit2') g.weapon=1;
+  if(e.code==='Digit3') g.weapon=2;
+  if(e.code==='Digit4') g.weapon=3;
+});
 
 /* Mobile helpers */
 document.getElementById('shootBtn').addEventListener('click', ()=>{
-  const g=gameState.game; if(!g||!g.running||g.paused) return;
-  // fire at current cursor (last touch or center)
-  g.fireAt(g.cursor.x,g.cursor.y);
+  const g=gameState.game; if(!g||!g.running||g.paused) return; g.fireAt(g.cursor.x,g.cursor.y);
 });
-document.getElementById('pauseBtn').addEventListener('click', ()=>{
-  const g=gameState.game; if(!g||!g.running) return; g.togglePause(true);
-});
-
-/* Shortcuts */
-window.addEventListener('keydown', (e)=>{
-  const g=gameState.game; if(!g) return;
-  if (e.code==='Escape' && g.running){ e.preventDefault(); g.togglePause(true); }
-  if (e.code==='KeyF'){ e.preventDefault(); const doc=document, el=document.documentElement; if(!doc.fullscreenElement){ el.requestFullscreen?.().catch(()=>{}); } else { doc.exitFullscreen?.(); } }
-  if (e.code==='KeyM'){ e.preventDefault(); g.opts.audio.mute=!g.opts.audio.mute; Audio.setMute(g.opts.audio.mute); }
-});
+document.getElementById('pauseBtn').addEventListener('click', ()=>{ const g=gameState.game; if(!g||!g.running) return; g.togglePause(true); });
+document.getElementById('weaponBtn').addEventListener('click', ()=>{ const g=gameState.game; if(!g) return; g.weapon=(g.weapon+1)%4; });
 
 /* Game lifecycle */
 function startNewGame(){ hideAllPanels(); $('#pauseOverlay').hidden=true; $('#gameOverOverlay').hidden=true; gameState.game.start(true); }
 function continueGame(){ hideAllPanels(); gameState.game.loadSave(); gameState.game.start(false); }
-
 function initGame(){
   resizeCanvas();
   const savedOpt=Store.get('ab_options',DEFAULT_OPTIONS);
@@ -846,26 +854,19 @@ function initGame(){
   for(const k in savedOpt){ if (typeof savedOpt[k]==='object') Object.assign(options[k],savedOpt[k]); else options[k]=savedOpt[k]; }
   const game=new Game(options); gameState.game=game;
   applyOptionsToUI(options); Audio.setVolumes(options.audio.sfx,options.audio.music); Audio.setMute(options.audio.mute);
-  refreshMenuStatus(); showPanel('menu'); if (game.hasSave()) game.loadSave();
+  refreshMenuStatus(); showPanel('menu'); if(game.hasSave()) game.loadSave();
   if(!rafId) rafId=requestAnimationFrame(gameLoop);
 }
 
 /* Boot */
-document.getElementById('bootBtn').addEventListener('click', ()=>{
-  Audio.init(); Audio.resume(); document.getElementById('boot').style.display='none'; initGame();
-});
+document.getElementById('bootBtn').addEventListener('click', ()=>{ Audio.init(); Audio.resume(); document.getElementById('boot').style.display='none'; initGame(); });
 window.addEventListener('beforeunload', ()=>{ const g=gameState.game; if(g?.running) g.saveSnapshot(); });
 window.addEventListener('blur', ()=>{ const g=gameState.game; if(g?.running && !g.paused){ g.togglePause(true); g.saveSnapshot(); refreshMenuStatus(); }});
 
 /* Kickoff */
-resizeCanvas();
-paintBootBG();
-/* Safety: keep overlays hidden on load */
-document.getElementById('pauseOverlay').hidden=true;
-document.getElementById('gameOverOverlay').hidden=true;
-/* Focus canvas cursor */
+resizeCanvas(); paintBootBG();
+document.getElementById('pauseOverlay').hidden=true; document.getElementById('gameOverOverlay').hidden=true;
 canvas.addEventListener('pointerdown', ()=> canvas.focus());
-
 })(); // IIFE end
 </script>
 </body>
