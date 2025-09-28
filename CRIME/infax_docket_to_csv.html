@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Infax Docket → Spreadsheet (MO-Greene)</title>
   <style>
-    :root { --bg:#0b1220; --fg:#e8eef7; --muted:#a9b4c4; --accent:#6cc04a; --card:#121a2b; --border:#26324a;}
+    :root { --bg:#0b1220; --fg:#e8eef7; --muted:#a9b4c4; --accent:#6cc04a; --accent2:#0ea5e9; --card:#121a2b; --border:#26324a;}
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:16px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";}
     header{padding:28px 20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#0f172a 0%, #0c1324 100%);}
@@ -15,8 +15,9 @@
     .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin:18px 0}
     .card h2{margin:0 0 12px;font-size:18px}
     .steps ol{margin:0;padding-left:20px}
-    a.bm{display:inline-block;background:var(--accent);color:#0b120f;text-decoration:none;font-weight:700;padding:12px 16px;border-radius:10px;box-shadow:0 2px 0 rgba(0,0,0,.25);}
-    a.bm:hover{filter:brightness(0.95)}
+    a.bm, a.primary{display:inline-block;background:var(--accent);color:#0b120f;text-decoration:none;font-weight:700;padding:12px 16px;border-radius:10px;box-shadow:0 2px 0 rgba(0,0,0,.25);}
+    a.primary{background:var(--accent2);color:#fff}
+    a.bm:hover, a.primary:hover{filter:brightness(0.95)}
     code, pre, textarea{background:#0f172a;border:1px solid var(--border);border-radius:10px;color:var(--fg);}
     textarea{width:100%;min-height:220px;padding:12px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
     .muted{color:var(--muted)}
@@ -25,45 +26,51 @@
     .cta{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
     .pill{display:inline-block;padding:.25rem .6rem;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:12px}
     .url{word-break:break-all}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:740px){.grid{grid-template-columns:1fr 1fr}}
   </style>
 </head>
 <body>
   <header>
     <h1>Infax Docket → Spreadsheet (MO-Greene)</h1>
-    <p class="small">One-file tool that turns the <span class="url">https://infax.com/docket/MO-Greene/</span> page into a downloadable spreadsheet (CSV) via a bookmarklet.</p>
+    <p class="small">Use one of the methods below (Edge extension, Favorite/Bookmarklet, or Console) to export the docket at <span class="url">https://infax.com/docket/MO-Greene/</span> to CSV.</p>
   </header>
   <main>
     <section class="card">
-      <h2>Quick start</h2>
-      <div class="steps">
-        <ol>
-          <li>Drag this button to your bookmarks bar: <a id="bm" class="bm" href="#">Infax → CSV</a></li>
-          <li>Go to <strong>https://infax.com/docket/MO-Greene/</strong> and wait until the docket table is visible.</li>
-          <li>Click the <em>Infax → CSV</em> bookmark. A CSV file (Excel/Sheets compatible) will download automatically.</li>
-        </ol>
-        <p class="muted small">Works entirely in your browser. It reads the table that’s already on the page and saves it as CSV—no servers, installs, or logins.</p>
-      </div>
-      <div class="cta">
-        <span class="pill">Output: CSV</span>
-        <span class="pill">Columns auto-detected</span>
-        <span class="pill">No external services</span>
+      <h2>Option A — Microsoft Edge extension (1-time setup, then automatic)</h2>
+      <div class="grid">
+        <div>
+          <ol>
+            <li>Install the tiny extension: <strong>edge-infax-export.zip</strong></li>
+            <li>Open <strong>edge://extensions</strong> → turn on <em>Developer mode</em> → <em>Load unpacked</em> → select the unzipped folder.</li>
+            <li>Click this to open the docket: <a class="primary" href="https://infax.com/docket/MO-Greene/" target="_blank" rel="noopener">Open MO–Greene docket</a></li>
+          </ol>
+          <p class="small muted">When the page loads, the extension adds a “Download CSV” button and will auto-download once the table appears.</p>
+        </div>
+        <div>
+          <div class="cta">
+            <span class="pill">Runs on that site</span>
+            <span class="pill">Auto-download</span>
+            <span class="pill">No external services</span>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="card">
-      <h2>Alternative: run from the browser console</h2>
-      <p class="small muted">If you don’t want to use a bookmarklet, open the docket page, press <strong>F12</strong> (or <strong>Ctrl/Cmd + Shift + I</strong>) → Console, paste the script below, and press Enter.</p>
+      <h2>Option B — Favorite (bookmarklet) — works in Edge too</h2>
+      <ol>
+        <li>Show the Favorites bar with <strong>Ctrl+Shift+B</strong> (or Settings → Appearance → <em>Show favorites bar</em> → Always).</li>
+        <li>Drag this to your Favorites bar: <a id="bm" class="bm" href="#">Infax → CSV</a></li>
+        <li>Go to <strong>https://infax.com/docket/MO-Greene/</strong> and click your new favorite.</li>
+      </ol>
+      <p class="small muted">Edge calls it the “Favorites bar.” The bookmarklet runs on the current page and saves the table as CSV.</p>
+    </section>
+
+    <section class="card">
+      <h2>Option C — Run from the browser console</h2>
+      <p class="small muted">Open the docket page, press <strong>F12</strong> (or <strong>Ctrl/Cmd + Shift + I</strong>) → Console, paste the script below, and press Enter.</p>
       <textarea id="console-snippet" readonly></textarea>
-    </section>
-
-    <section class="card">
-      <h2>Notes</h2>
-      <ul class="small muted">
-        <li>Designed for pages that show columns like <em>Case Name, Case Number, Floor, Courtroom, Hearing Time, Judge</em>. The script will also try <em>Party Name</em>, <em>Start Time</em>, <em>Case Type</em>, and <em>Room</em> if present.</li>
-        <li>It looks for the first visible HTML table or ARIA table/grid and exports those rows. If the page has multiple tables, scroll to make the docket table visible and run again.</li>
-        <li>CSV opens in Excel, Google Sheets, Apple Numbers, LibreOffice, etc.</li>
-        <li>Please follow the website’s terms of use and any applicable laws for data reuse.</li>
-      </ul>
     </section>
   </main>
   <footer class="small">
@@ -146,9 +153,9 @@
 
     // Generate a robust bookmarklet from the pretty code
     const bmCode = CONSOLE_SNIPPET
-      .replace(/\\n/g, ' ')               // newlines -> spaces
-      .replace(/\\s{2,}/g, ' ')           // collapse multiple spaces
-      .replace(/\\s*([{}();,:])\\s*/g, '$1'); // trim around punctuation (simple/minimal)
+      .replace(/\n/g, ' ')               // newlines -> spaces
+      .replace(/\s{2,}/g, ' ')           // collapse multiple spaces
+      .replace(/\s*([{}();,:])\s*/g, '$1'); // trim around punctuation (simple/minimal)
     document.getElementById('bm').setAttribute('href', 'javascript:' + bmCode);
   </script>
 </body>
