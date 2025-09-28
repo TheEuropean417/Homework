@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>AEGIS CORE — Orbital Commandlike (v3)</title>
+<title>AEGIS CORE — Orbital Commandlike (v4)</title>
 <style>
   :root{
     --bg:#070b16;--bg2:#0c1226;--ink:#e6ecff;--ink-dim:#9aa5c3;
@@ -29,7 +29,7 @@
   .meter.small{width:120px}
   .meter .fill{position:absolute; inset:0; width:0%; background:linear-gradient(90deg,var(--a),var(--b)); box-shadow:0 0 12px rgba(95,210,255,.6) inset}
   #hud .right{position:absolute; top:8px; right:12px; display:flex; gap:8px}
-  #hud .legend{position:absolute; left:12px; bottom:18px; display:flex; flex-direction:column; gap:6px; width:min(620px, calc(100% - 24px))}
+  #hud .legend{position:absolute; left:12px; bottom:18px; display:flex; flex-direction:column; gap:6px; width:min(720px, calc(100% - 24px))}
   .legend .row{display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:10px; background:var(--glass); border:1px solid var(--glass-strong); backdrop-filter: blur(4px);}
   .legend .key{padding:2px 6px; border-radius:6px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); font-family:ui-monospace,monospace}
   .legend .locked{opacity:.5}
@@ -40,7 +40,7 @@
   /* Overlay / Panel */
   #overlay{position:fixed; inset:48px 0 0 0; display:none; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(10,15,31,.0), rgba(10,15,31,.55) 10%, rgba(10,15,31,.75)); backdrop-filter: blur(6px); }
   #overlay.show{display:flex}
-  .panel{width:min(900px, calc(100% - 32px)); max-height:calc(100% - 64px); overflow:auto; background:var(--glass); border:1px solid var(--glass-strong); border-radius:18px; padding:18px; box-shadow: var(--shadow)}
+  .panel{width:min(920px, calc(100% - 32px)); max-height:calc(100% - 64px); overflow:auto; background:var(--glass); border:1px solid var(--glass-strong); border-radius:18px; padding:18px; box-shadow: var(--shadow)}
   .grid{display:grid; grid-template-columns: 1fr 1fr; gap:18px}
   .big-title{font-size:22px; font-weight:900; letter-spacing:.16em; margin:6px 0 14px; color:var(--ink)}
   .subtitle{margin-top:8px; color:var(--ink-dim)}
@@ -84,7 +84,7 @@
     </div>
 
     <div class="core muted">
-      Controls: Click deploy • <span class="kbd">Q/E</span> switch • <span class="kbd">1–5</span> select •
+      Controls: Click deploy • <span class="kbd">Q/E</span> switch • <span class="kbd">1–0</span> select •
       <span class="kbd">Shift</span> Overclock • <span class="kbd">F</span> Fullscreen • <span class="kbd">Esc</span> Pause
     </div>
 
@@ -98,7 +98,7 @@
   <div id="overlay" role="dialog" aria-modal="true">
     <div class="panel">
       <div class="big-title">AEGIS CORE</div>
-      <div class="subtitle">360° orbital defense with formula‑driven Tech upgrades—no pickups, only kills. Bigger blasts, nova shockwaves, dual rails, lockdown nets, and singularities.</div>
+      <div class="subtitle">360° orbital defense with **exotic** deterministic Tech—EMP, orbital turrets, shields, nanites (kamikaze conversion), and antimatter cascades.</div>
 
       <div class="section">
         <div class="btn-row">
@@ -123,15 +123,14 @@
       <div class="section">
         <div class="big-title">How to Play</div>
         <div class="subtitle">
-          Enemies stream from the perimeter toward your central <b>Core</b>. Click to deploy your active weapon; switch with <b>Q/E</b> or <b>1–5</b>.
-          Kills raise <b>Tech</b> and deterministically upgrade weapons. There are no pickups or random powerups.
-          Use <b>Overclock</b> (<span class="kbd">Shift</span>) to slow time when charged. Press <span class="kbd">F</span> for fullscreen.
+          Enemies stream from the perimeter toward the <b>Core</b>. Click to deploy your active weapon; switch with <b>Q/E</b> or <b>1–0</b>.
+          Kills raise <b>Tech</b> and deterministically upgrade weapons (no pickups). Use <b>Overclock</b> with <span class="kbd">Shift</span>. Press <span class="kbd">F</span> for fullscreen.
         </div>
       </div>
       <div class="section muted" style="font-size:12px">
-        <span class="tag">No Audio</span> This build intentionally includes no sound or music.
-        <span class="tag">Persistence</span> Uses localStorage for best score & settings.
-        <span class="tag">Version</span> 3.0
+        <span class="tag">No Audio</span> Intentionally silent.
+        <span class="tag">Persistence</span> localStorage for best & settings.
+        <span class="tag">Version</span> 4.0
       </div>
     </div>
   </div>
@@ -139,16 +138,12 @@
 
 <script>
 /* ===========================
-   AEGIS CORE v3 — Orbital Commandlike
-   Upgrades are formula-driven, strictly kill-gated, and monotonic:
-     - Tech level L = floor(kills / 20)
-     - Each weapon’s stats derive from L; big feature toggles at breakpoints.
-   Weapons:
-     1) Pulse Bomb (explosive; huge radius; echoes at higher Tech)
-     2) Nova Ring (expanding shockwave ring)
-     3) Rail Lance (beam; dual rails at higher Tech)
-     4) Lockdown Net (expanding lattice; slows → roots at high Tech)
-     5) Singularity (gravity well → massive blast)
+   AEGIS CORE v4 — Exotic arsenal
+   Deterministic, monotonic upgrades:
+     Tech level L = floor(kills / 20). Every formula increases or unlocks.
+   Additions:
+     EMP Pulse (disable), Orbital Turret (auto fire), Aegis Shield (sector shield),
+     Nanite Swarm (infect → kamikaze), Antimatter Core (annihilation cascade).
    No audio. Fullscreen with 'F'.
    =========================== */
 
@@ -158,14 +153,13 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const easeOutQuad=t=>1-(1-t)*(1-t);
 const dist2=(x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1;return dx*dx+dy*dy;}
-function hsl(h,s,l,a=1){return `hsla(${h},${s}%,${l}%,${a})`}
 
 // Mulberry32 deterministic RNG
 function mulberry32(seed){ let t=seed>>>0; return function(){ t+=0x6D2B79F5; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; } }
 function strToSeed(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
 
 /* ---------- Save ---------- */
-const SAVE_KEY='aegis_core_v3';
+const SAVE_KEY='aegis_core_v4';
 let SAVE = JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
 if(!SAVE.settings){ SAVE.settings = { particles:true, shake:true, colorblind:false, flashes:true, difficulty:'normal' }; }
 if(!SAVE.stats){ SAVE.stats = { games:0, best:0, totalScore:0, totalKills:0 }; }
@@ -196,14 +190,18 @@ const GAME={
   t:0, last:performance.now(),
   score:0, wave:1,
   kills:0,
-  arrays:{ enemies:[], bombs:[], explosions:[], beams:[], nets:[], wells:[], particles:[], resonances:[], flashes:[], waves:[] },
+  arrays:{
+    enemies:[], bombs:[], explosions:[], beams:[], nets:[], wells:[], // prior
+    waves:[], particles:[], resonances:[], flashes:[],
+    emps:[], turrets:[], bullets:[], shields:[], nanites:[], antimats:[]
+  },
   focus:0, focusMax:100, focusActive:false,
   director:{ t:0, spawnT:0, every:1.0, sMin:80, sMax:160 },
   weapons:{
-    order:['pulse','nova','rail','net','singularity'],
+    order:['pulse','nova','emp','rail','turret','net','shield','nanites','singularity','antimatter'],
     unlocked:new Set(['pulse']),
     active:'pulse',
-    cd:{pulse:0, nova:0, rail:0, net:0, singularity:0}
+    cd:{pulse:0,nova:0,emp:0,rail:0,turret:0,net:0,shield:0,nanites:0,singularity:0,antimatter:0}
   },
   tech:{ level:0, mods:{}, flags:{} },
   camera:{shake:0}
@@ -215,49 +213,76 @@ CORE.r = 22*DPR;
 const UNLOCKS = [
   {kills:0,    id:'pulse'},
   {kills:15,   id:'nova'},
+  {kills:25,   id:'emp'},
   {kills:35,   id:'rail'},
-  {kills:60,   id:'net'},
-  {kills:100,  id:'singularity'}
+  {kills:50,   id:'turret'},
+  {kills:65,   id:'net'},
+  {kills:80,   id:'shield'},
+  {kills:95,   id:'nanites'},
+  {kills:110,  id:'singularity'},
+  {kills:150,  id:'antimatter'}
 ];
-// Tech level L = floor(kills/20). Stats derive from L:
+// L = floor(kills/20) drives strictly increasing stats
 function recomputeTech(){
   const L = Math.floor(GAME.kills/20);
-  if(L!==GAME.tech.level){
-    GAME.tech.level=L;
-  }
-  // strictly increasing or tightening parameters
+  GAME.tech.level=L;
+
   GAME.tech.mods = {
-    // Pulse explosion multiplier (base radius * this)
-    pulseMult: 1.0 + 0.12*Math.min(L,7) + 0.02*Math.max(0,L-7), // gentle taper at high L
-    // Nova shockwave
+    // Pulse
+    pulseMult: 1.00 + 0.12*Math.min(L,7) + 0.02*Math.max(0,L-7),
+    // Nova
     waveSpeed: 260 + 18*L,
     waveThick: (12 + 1.2*L)*DPR,
     // Rail
-    railWidth: Math.min(24, 10 + 2*L)*DPR,
+    railWidth: Math.min(26, 10 + 2*L)*DPR,
     // Net
-    netSlow: Math.max(0.30, 0.55 - 0.02*L), // lower is stronger
+    netSlow: Math.max(0.28, 0.55 - 0.02*L),
+    netRoot: L>=11 ? 0.35 : 0,
     // Singularity
     wellPull: 140 + 18*L,
-    finalBlastMult: 1.0 + 0.08*L // final pop scales
+    finalBlastMult: 1.00 + 0.08*L,
+    // EMP
+    empRadius: 170*DPR + 16*DPR*L,
+    empDisable: 1.4 + 0.12*L,
+    // Turret
+    turretLife: 7 + 0.6*L,
+    turretFireRate: 2.2 + 0.35*L,   // shots/s
+    turretBulletDmg: 1 + Math.floor(L/3),
+    turretBulletSpd: 460 + 20*L,
+    // Shield
+    shieldLife: 4.5 + 0.35*L,
+    shieldArc: Math.min(220, 110 + 10*L) * Math.PI/180, // radians
+    shieldRadius: CORE.r + 60*DPR,
+    shieldThick: (12 + L)*DPR,
+    shieldSpin: 0.8 + 0.05*L, // rad/s
+    // Nanites
+    naniteDuration: 5.0 + 0.25*L,
+    naniteSpeedMul: 1.2 + 0.03*L,
+    // Antimatter
+    antiLife: 1.4 + 0.08*L,
+    antiStartR: 18*DPR,
+    antiGrow: 120*DPR + 14*DPR*L,
+    antiCascade: 0.6 + 0.05*L // radius multiplier for microbursts
   };
   GAME.tech.flags = {
-    pulseEcho: L>=4,         // Pulse spawns a nova ring echo
-    waveDouble: L>=7,        // Nova spawns a delayed second ring
-    railDual:  L>=9,         // Two rails with slight spread
-    netRoot:   L>=11 ? 0.35 : 0 // Net briefly roots near center (seconds)
+    pulseEcho: L>=4,       // Pulse emits a nova echo
+    waveDouble: L>=7,      // Nova double ring
+    railDual:  L>=9,       // Dual rails
+    turretPair: L>=8,      // Two turrets per cast
+    shieldKill: L>=6       // Shield kills (vs reflect); always true here—kept for tuning
   };
-  // Ensure unlocks based on kills
+
   for(const u of UNLOCKS){ if(GAME.kills>=u.kills) GAME.weapons.unlocked.add(u.id); }
   renderLegend();
 }
 
-// Cooldowns scale down with level; Singularity scales less so.
-const BASE_CD = { pulse:0.45, nova:1.6, rail:2.0, net:3.0, singularity:5.2 };
+// Cooldowns scale down with level; slowest decay for antimatter/singularity
+const BASE_CD = { pulse:0.45, nova:1.6, emp:3.0, rail:2.0, turret:6.0, net:3.0, shield:7.0, nanites:4.0, singularity:5.2, antimatter:8.0 };
 function cooldownFor(id){
   const L = GAME.tech.level;
   const base = BASE_CD[id];
-  const perLevel = (id==='singularity') ? 0.985 : 0.96; // singularity cools slower
-  return base * Math.pow(perLevel, L);
+  const k = (id==='antimatter'||id==='singularity') ? 0.985 : 0.96;
+  return base * Math.pow(k, L);
 }
 function setCooldown(id){ GAME.weapons.cd[id]=cooldownFor(id); }
 
@@ -320,7 +345,7 @@ addEventListener('keydown', e=>{
   if(k==='f'){ toggleFullscreen(); }
   if(k==='q'){ cycleWeapon(-1); }
   if(k==='e'){ cycleWeapon(1); }
-  if('12345'.includes(k)){ selectWeapon(parseInt(k)); }
+  if('1234567890'.includes(k)){ selectWeapon(k==='0'?10:parseInt(k)); }
 });
 addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
 
@@ -337,20 +362,50 @@ class Enemy{
   constructor(x,y,vx,vy,type='meteor',hp=1, speed=120){
     this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.type=type; this.hp=hp; this.baseSpeed=speed;
     this.r=(type==='shield'?9:7)*DPR; this.age=0; this.alive=true;
+    this.empT=0; this.infectedT=0;
   }
   update(dt){
     this.age+=dt;
-    // behaviors
-    if(this.type==='dasher'){
-      const d=Math.hypot(this.x-CORE.x, this.y-CORE.y);
-      const mult = d<200*DPR?1.7:1.0;
-      this.x+=this.vx*dt*mult; this.y+=this.vy*dt*mult;
-    }else if(this.type==='splitter'){
+
+    // EMP disable
+    if(this.empT>0){
+      this.empT = Math.max(0, this.empT - dt);
+      // barely drift so you can see they're frozen
+      this.x += this.vx*dt*0.05; this.y += this.vy*dt*0.05;
+    } else if(this.infectedT>0){
+      this.infectedT = Math.max(0, this.infectedT - dt);
+      // steer toward nearest other enemy (kamikaze)
+      let target=null, best=1e9;
+      for(const o of GAME.arrays.enemies){
+        if(!o.alive || o===this) continue;
+        const d2=dist2(this.x,this.y,o.x,o.y);
+        if(d2<best){best=d2; target=o;}
+      }
+      if(target){
+        const dx=target.x-this.x, dy=target.y-this.y, len=Math.hypot(dx,dy)||1;
+        const spd=this.baseSpeed*GAME.tech.mods.naniteSpeedMul;
+        this.vx=dx/len*spd; this.vy=dy/len*spd;
+        // collision → double kill + explosion
+        if(best <= (this.r+target.r)*(this.r+target.r)){
+          this.kill(); if(target.alive) target.kill();
+          spawnExplosion((this.x+target.x)/2,(this.y+target.y)/2,true);
+          return;
+        }
+      }
       this.x+=this.vx*dt; this.y+=this.vy*dt;
-      this.x+=Math.sin(this.age*5)*(10*dt);
-      this.y+=Math.cos(this.age*6)*(8*dt);
-    }else{
-      this.x+=this.vx*dt; this.y+=this.vy*dt;
+    } else {
+      // normal / type behaviors
+      if(this.type==='dasher'){
+        const d=Math.hypot(this.x-CORE.x, this.y-CORE.y);
+        const mult = d<200*DPR?1.7:1.0;
+        this.x+=this.vx*dt*mult; this.y+=this.vy*dt*mult;
+      }else if(this.type==='splitter'){
+        this.x+=this.vx*dt; this.y+=this.vy*dt;
+        this.x+=Math.sin(this.age*5)*(10*dt);
+        this.y+=Math.cos(this.age*6)*(8*dt);
+      }else{
+        this.x+=this.vx*dt; this.y+=this.vy*dt;
+      }
     }
 
     // reached core?
@@ -363,6 +418,7 @@ class Enemy{
     }
   }
   hit(dmg=1){
+    if(this.empT>0 && dmg<=0) return; // (EMP visual case if needed)
     this.hp-=dmg;
     if(this.hp<=0) this.kill();
   }
@@ -373,7 +429,6 @@ class Enemy{
     GAME.score += 10;
     recomputeTech();
     particleBurst(this.x,this.y, 10, 'kill');
-    // splitter spawns fragments
     if(this.type==='splitter'){
       const n=3;
       for(let i=0;i<n;i++){
@@ -386,9 +441,15 @@ class Enemy{
   }
   draw(){
     ctx.save(); ctx.globalCompositeOperation='lighter';
-    const c = (this.type==='shield')?'rgba(255,198,88,.9)':'rgba(255,98,162,.9)';
+    let c = (this.type==='shield')?'rgba(255,198,88,.9)':'rgba(255,98,162,.9)';
+    if(this.empT>0) c='rgba(180,200,255,.8)';
     ctx.shadowBlur=14; ctx.shadowColor=c; ctx.fillStyle=c;
     ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,TAU); ctx.fill();
+    // infected halo
+    if(this.infectedT>0){
+      ctx.lineWidth=1.2*DPR; ctx.strokeStyle='rgba(100,210,255,.6)';
+      ctx.beginPath(); ctx.arc(this.x,this.y,this.r*1.5,0,TAU); ctx.stroke();
+    }
     ctx.restore();
   }
 }
@@ -420,9 +481,7 @@ class Bomb{
     if(!this.alive) return;
     this.alive=false;
     spawnExplosion(this.x,this.y,true);
-    if(GAME.tech.flags.pulseEcho){ // pulse emits a nova echo at higher tech
-      GAME.arrays.waves.push(new ShockWave(this.x,this.y,{r0:14*DPR}));
-    }
+    if(GAME.tech.flags.pulseEcho){ GAME.arrays.waves.push(new ShockWave(this.x,this.y,{r0:14*DPR})); }
   }
 }
 class Explosion{
@@ -438,7 +497,6 @@ class Explosion{
     const p=clamp(this.t/this.life,0,1);
     this.r=this.rMax*easeOutQuad(Math.min(1,p*1.4));
     if(this.t>this.life) this.alive=false;
-    // leave resonance near peak
     if(Math.abs(this.r - this.rMax) < 0.6 && this.t < this.life*0.8){
       spawnResonance(this.x,this.y,this.rMax*0.8);
     }
@@ -454,18 +512,17 @@ class Explosion{
     ctx.restore();
   }
 }
-// Expanding shockwave ring (Nova)
+// Nova shockwave ring
 class ShockWave{
   constructor(x,y,opts={}){
     this.x=x; this.y=y; this.t=0; this.life=0.9; this.alive=true;
     this.r=opts.r0 || 6*DPR;
     this.speed = GAME.tech.mods.waveSpeed;
     this.thick = GAME.tech.mods.waveThick;
-    this.secondDelay = (GAME.tech.flags.waveDouble && !opts.secondary) ? 0.12 : null;
+    this.secondDelay = (!opts.secondary && GAME.tech.flags.waveDouble) ? 0.12 : null;
   }
   update(dt){
     this.t+=dt; this.r += this.speed*dt;
-    // damage on ring contact
     for(const en of GAME.arrays.enemies){
       if(!en.alive) continue;
       const d=Math.hypot(en.x-this.x,en.y-this.y);
@@ -483,13 +540,12 @@ class ShockWave{
     ctx.restore();
   }
 }
-
+// Rail
 class RailBeam{
   constructor(x0,y0,x1,y1){
     this.x0=x0; this.y0=y0; this.x1=x1; this.y1=y1;
     this.t=0; this.life=0.12; this.alive=true;
     this.width=GAME.tech.mods.railWidth;
-    // apply immediate damage to enemies crossing
     for(const en of GAME.arrays.enemies){
       if(!en.alive) continue;
       const d = pointToSegmentDist(en.x,en.y, x0,y0, x1,y1);
@@ -504,31 +560,28 @@ class RailBeam{
     ctx.restore();
   }
 }
+// Net
 class NetField{
   constructor(x,y){
     this.x=x; this.y=y; this.t=0; this.life=1.7; this.alive=true;
     this.r=0; this.rMax=170*DPR;
-    this.slow=GAME.tech.mods.netSlow; // 0.55 .. 0.30
+    this.slow=GAME.tech.mods.netSlow;
     this.tick=0;
   }
   update(dt){
     this.t+=dt; const p=clamp(this.t/this.life,0,1);
     this.r=this.rMax*easeOutQuad(Math.min(1,p*1.2));
     this.tick+=dt;
-    const rootWindow = GAME.tech.flags.netRoot; // seconds at start where root is active near center
+    const rootWindow = GAME.tech.mods.netRoot;
     for(const en of GAME.arrays.enemies){
       if(!en.alive) continue;
       const d2e=dist2(en.x,en.y,this.x,this.y);
       if(d2e <= (this.r+en.r)*(this.r+en.r)){
-        // slow everywhere in the net
         en.x -= en.vx*dt*(1-this.slow);
         en.y -= en.vy*dt*(1-this.slow);
-        // root near the center during early window
         if(rootWindow && this.t<rootWindow){
           const d=Math.sqrt(d2e);
-          if(d <= this.r*0.33){
-            en.x -= en.vx*dt; en.y -= en.vy*dt; // force near-stasis
-          }
+          if(d <= this.r*0.33){ en.x -= en.vx*dt; en.y -= en.vy*dt; }
         }
         if(this.tick>=0.16){ en.hit(1); GAME.score+=2; }
       }
@@ -540,7 +593,6 @@ class NetField{
     ctx.save(); ctx.globalCompositeOperation='lighter';
     ctx.lineWidth=1.4*DPR; ctx.strokeStyle='rgba(100,210,255,.45)';
     ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,TAU); ctx.stroke();
-    // lattice arms
     for(let i=0;i<6;i++){
       const a=i*(TAU/6);
       ctx.beginPath();
@@ -551,6 +603,7 @@ class NetField{
     ctx.restore();
   }
 }
+// Singularity
 class Well{
   constructor(x,y){
     this.x=x; this.y=y; this.t=0; this.life=1.05; this.alive=true; this.pull=GAME.tech.mods.wellPull;
@@ -564,13 +617,12 @@ class Well{
       const dx=this.x-en.x, dy=this.y-en.y;
       const d=Math.hypot(dx,dy)||1;
       if(d<this.r*1.2){
-        const f=(this.pull/d)*dt; // stronger with Tech
+        const f=(this.pull/d)*dt;
         en.vx+=dx/d*f; en.vy+=dy/d*f;
       }
     }
     if(this.t>=this.life){
       this.alive=false;
-      // final blast scales with Tech
       const ex = new Explosion(this.x,this.y,0);
       ex.rMax *= GAME.tech.mods.finalBlastMult;
       GAME.arrays.explosions.push(ex);
@@ -584,8 +636,159 @@ class Well{
     ctx.restore();
   }
 }
+// EMP Pulse
+class EMPPulse{
+  constructor(x,y){
+    this.x=x; this.y=y; this.t=0; this.life=0.6; this.alive=true;
+    this.r=0; this.rMax=GAME.tech.mods.empRadius;
+    this.disable=GAME.tech.mods.empDisable;
+  }
+  update(dt){
+    this.t+=dt;
+    const p=clamp(this.t/this.life,0,1);
+    this.r=this.rMax*easeOutQuad(Math.min(1,p*1.35));
+    for(const en of GAME.arrays.enemies){
+      if(!en.alive) continue;
+      const d2e=dist2(en.x,en.y,this.x,this.y);
+      if(d2e <= (this.r+en.r)*(this.r+en.r)){
+        en.empT = Math.max(en.empT, this.disable);
+      }
+    }
+    if(this.t>=this.life) this.alive=false;
+  }
+  draw(){
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.lineWidth=2*DPR; ctx.strokeStyle='rgba(120,190,255,.75)';
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,TAU); ctx.stroke();
+    ctx.restore();
+  }
+}
+// Orbital Turret + Bullets
+class Turret{
+  constructor(){
+    this.angle=0; this.r=CORE.r + 90*DPR; this.t=0; this.life=GAME.tech.mods.turretLife; this.alive=true;
+    this.fireT=0;
+  }
+  update(dt){
+    this.t+=dt; if(this.t>=this.life){ this.alive=false; return; }
+    this.angle += GAME.tech.mods.shieldSpin*0.6*dt;
+    // fire automatically
+    this.fireT += dt;
+    const delay = 1/ GAME.tech.mods.turretFireRate;
+    if(this.fireT>=delay){
+      this.fireT=0;
+      // target nearest enemy
+      let target=null, best=1e9;
+      for(const en of GAME.arrays.enemies){
+        if(!en.alive) continue; const d2=dist2(en.x,en.y, CORE.x + Math.cos(this.angle)*this.r, CORE.y + Math.sin(this.angle)*this.r);
+        if(d2<best){best=d2; target=en;}
+      }
+      if(target){
+        const sx=CORE.x + Math.cos(this.angle)*this.r, sy=CORE.y + Math.sin(this.angle)*this.r;
+        const dx=target.x-sx, dy=target.y-sy, len=Math.hypot(dx,dy)||1;
+        const sp=GAME.tech.mods.turretBulletSpd;
+        GAME.arrays.bullets.push(new Bullet(sx,sy, dx/len*sp, dy/len*sp, GAME.tech.mods.turretBulletDmg));
+      }
+    }
+  }
+  draw(){
+    const x=CORE.x + Math.cos(this.angle)*this.r, y=CORE.y + Math.sin(this.angle)*this.r;
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.fillStyle='rgba(100,210,255,.9)'; ctx.shadowBlur=14; ctx.shadowColor='rgba(100,210,255,.8)';
+    ctx.beginPath(); ctx.arc(x,y,6*DPR,0,TAU); ctx.fill();
+    ctx.restore();
+  }
+}
+class Bullet{
+  constructor(x,y,vx,vy,dmg){ this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.dmg=dmg; this.t=0; this.life=1.4; this.alive=true; }
+  update(dt){
+    this.t+=dt; if(this.t>=this.life){ this.alive=false; return; }
+    this.x+=this.vx*dt; this.y+=this.vy*dt;
+    for(const en of GAME.arrays.enemies){
+      if(!en.alive) continue;
+      if(dist2(this.x,this.y,en.x,en.y)<= (en.r+2*DPR)*(en.r+2*DPR)){
+        en.hit(this.dmg); this.alive=false; GAME.score+=2; break;
+      }
+    }
+  }
+  draw(){
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.fillStyle='rgba(100,210,255,.9)'; ctx.beginPath(); ctx.arc(this.x,this.y,2*DPR,0,TAU); ctx.fill();
+    ctx.restore();
+  }
+}
+// Aegis Shield (sector around core)
+class Shield{
+  constructor(){
+    this.angle=0; this.t=0; this.life=GAME.tech.mods.shieldLife; this.alive=true;
+    this.arc=GAME.tech.mods.shieldArc; this.r=GAME.tech.mods.shieldRadius; this.th=GAME.tech.mods.shieldThick;
+    this.spin=GAME.tech.mods.shieldSpin;
+  }
+  update(dt){
+    this.t+=dt; this.angle += this.spin*dt;
+    if(this.t>=this.life){ this.alive=false; return; }
+    for(const en of GAME.arrays.enemies){
+      if(!en.alive) continue;
+      const dx=en.x-CORE.x, dy=en.y-CORE.y; const ang=Math.atan2(dy,dx);
+      let dAng = Math.atan2(Math.sin(ang-this.angle), Math.cos(ang-this.angle));
+      const dist=Math.hypot(dx,dy);
+      if(Math.abs(dAng) <= this.arc*0.5 && Math.abs(dist - this.r) <= this.th*0.6){
+        if(GAME.tech.flags.shieldKill){ en.kill(); spawnExplosion(en.x,en.y,false); }
+        else{
+          // reflect outward (kept for tuning)
+          const nX = Math.cos(ang), nY=Math.sin(ang);
+          const dot = en.vx*nX + en.vy*nY;
+          en.vx = en.vx - 2*dot*nX; en.vy = en.vy - 2*dot*nY;
+        }
+      }
+    }
+  }
+  draw(){
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.lineWidth=this.th; ctx.strokeStyle='rgba(100,210,255,.5)';
+    ctx.beginPath();
+    ctx.arc(CORE.x,CORE.y,this.r, this.angle - this.arc/2, this.angle + this.arc/2);
+    ctx.stroke(); ctx.restore();
+  }
+}
+// Nanites (attach to nearest enemy)
+function infectNearestWithNanites(x,y){
+  let target=null, best=1e9;
+  for(const en of GAME.arrays.enemies){
+    if(!en.alive) continue;
+    const d2=dist2(x,y,en.x,en.y); if(d2<best){best=d2; target=en;}
+  }
+  if(target){ target.infectedT = GAME.tech.mods.naniteDuration; }
+}
+// Antimatter Core (consumes enemies → cascade)
+class AntiCore{
+  constructor(x,y){
+    this.x=x; this.y=y; this.t=0; this.life=GAME.tech.mods.antiLife; this.alive=true;
+    this.r=GAME.tech.mods.antiStartR; this.grow=GAME.tech.mods.antiGrow;
+  }
+  update(dt){
+    this.t+=dt; this.r += this.grow*dt;
+    for(const en of GAME.arrays.enemies){
+      if(!en.alive) continue;
+      if(dist2(this.x,this.y,en.x,en.y) <= (this.r+en.r)*(this.r+en.r)){
+        en.kill();
+        // microburst cascade
+        const ex = new Explosion(en.x,en.y,0);
+        ex.rMax *= GAME.tech.mods.antiCascade;
+        GAME.arrays.explosions.push(ex);
+      }
+    }
+    if(this.t>=this.life){ this.alive=false; spawnExplosion(this.x,this.y,true); cameraShake(9); }
+  }
+  draw(){
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.lineWidth=1.6*DPR; ctx.strokeStyle='rgba(255,255,255,.4)';
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,TAU); ctx.stroke();
+    ctx.restore();
+  }
+}
 
-/* ---------- Geometry helpers ---------- */
+/* ---------- Geometry helper ---------- */
 function pointToSegmentDist(x,y, x1,y1, x2,y2){
   const dx=x2-x1, dy=y2-y1;
   const l2=dx*dx+dy*dy; if(l2===0) return Math.hypot(x-x1,y-y1);
@@ -622,9 +825,8 @@ function spawnFromPerimeter(){
   const R = Math.max(W,H)*0.6 + 60*DPR; // spawn radius
   const ang = GAME.rng()*TAU;
   const sx=cx+Math.cos(ang)*R, sy=cy+Math.sin(ang)*R;
-
   const type=randomEnemyType();
-  const speed=lerp(GAME.director.sMin, GAME.director.sMax, GAME.rng()); // random speeds per enemy
+  const speed=lerp(GAME.director.sMin, GAME.director.sMax, GAME.rng()); // random speeds
   const dx=cx-sx, dy=cy-sy; const len=Math.hypot(dx,dy)||1;
   const vx=dx/len*speed, vy=dy/len*speed;
   const hp=(type==='shield')?2:1;
@@ -632,16 +834,12 @@ function spawnFromPerimeter(){
 }
 function updateDirector(dt){
   const d=GAME.director; d.t+=dt; d.spawnT+=dt;
-
-  // difficulty pacing: speed window & spawn cadence scale with wave and performance
   const perf = clamp((GAME.kills/ (10+GAME.wave*10)) + (CORE.integrity-1)*0.25, 0, 3);
   const baseEvery = 1.0 / (1 + perf*0.12 + (GAME.wave-1)*0.05);
   d.every = clamp(baseEvery, 0.28, 1.2);
-
   const baseMin = 80 + GAME.wave*3, baseMax = 160 + GAME.wave*7;
   d.sMin = clamp(baseMin, 70, 280);
   d.sMax = clamp(baseMax, 120, 480);
-
   const delay = d.every * (GAME.focusActive?1.7:1);
   if(d.spawnT>=delay){
     d.spawnT=0;
@@ -649,8 +847,6 @@ function updateDirector(dt){
     const count = burst ? (2 + (GAME.rng()*3|0)) : 1;
     for(let i=0;i<count;i++) spawnFromPerimeter();
   }
-
-  // periodic wave bump
   if(GAME.t >= 24 + (GAME.wave-1)*8){
     GAME.wave++; GAME.t=0; GAME.score += 120 + GAME.wave*30;
   }
@@ -658,11 +854,16 @@ function updateDirector(dt){
 
 /* ---------- Weapons control ---------- */
 const WEAPON_INFO={
-  pulse:{name:'Pulse Bomb', desc:'Massive explosion at cursor; resonates. Click again near a bomb to detonate early.'},
-  nova:{name:'Nova Ring', desc:'Expanding shockwave ring that damages on contact.'},
-  rail:{name:'Rail Lance', desc:'Piercing beam from Core toward cursor (dual rails at higher Tech).'},
-  net:{name:'Lockdown Net', desc:'Expanding lattice that slows; briefly roots near center at high Tech.'},
-  singularity:{name:'Singularity', desc:'Temporary gravity well culminating in a huge blast.'},
+  pulse:{name:'Pulse Bomb', desc:'Massive explosion; resonates. Click again near a bomb to detonate early.'},
+  nova:{name:'Nova Ring', desc:'Expanding ring that damages on contact.'},
+  emp:{name:'EMP Pulse', desc:'Disables enemies in a large radius.'},
+  rail:{name:'Rail Lance', desc:'Piercing beam from Core (dual at high Tech).'},
+  turret:{name:'Orbital Turret', desc:'Deploys auto‑firing turret(s) orbiting the Core.'},
+  net:{name:'Lockdown Net', desc:'Expanding lattice that slows; roots near center at high Tech.'},
+  shield:{name:'Aegis Shield', desc:'Rotating sector shield that destroys/reflects threats.'},
+  nanites:{name:'Nanite Swarm', desc:'Infect nearest enemy; it kamikazes other enemies.'},
+  singularity:{name:'Singularity', desc:'Gravity well that culminates in a huge blast.'},
+  antimatter:{name:'Antimatter Core', desc:'Growing annihilation field; cascade microbursts.'}
 };
 function weaponUnlocked(id){ return GAME.weapons.unlocked.has(id); }
 function cycleWeapon(dir){
@@ -681,34 +882,24 @@ function fireActive(x,y){
   const id=GAME.weapons.active;
   if(GAME.weapons.cd[id]>0) return;
   switch(id){
-    case 'pulse': {
-      const b=new Bomb(CORE.x,CORE.y,x,y); GAME.arrays.bombs.push(b);
-      break;
-    }
-    case 'nova': {
-      GAME.arrays.waves.push(new ShockWave(x,y));
-      break;
-    }
+    case 'pulse': { GAME.arrays.bombs.push(new Bomb(CORE.x,CORE.y,x,y)); break; }
+    case 'nova': { GAME.arrays.waves.push(new ShockWave(x,y)); break; }
+    case 'emp': { GAME.arrays.emps.push(new EMPPulse(x,y)); break; }
     case 'rail': {
-      // primary beam
       fireRailAt(x,y,0);
-      // dual rails at high Tech (slight angular spread)
-      if(GAME.tech.flags.railDual){
-        fireRailAt(x,y, 0.05);
-        fireRailAt(x,y,-0.05);
-      }
-      cameraShake(5);
+      if(GAME.tech.flags.railDual){ fireRailAt(x,y, 0.05); fireRailAt(x,y,-0.05); }
+      cameraShake(5); break;
+    }
+    case 'turret': {
+      GAME.arrays.turrets.push(new Turret());
+      if(GAME.tech.flags.turretPair) GAME.arrays.turrets.push(new Turret());
       break;
     }
-    case 'net': {
-      GAME.arrays.nets.push(new NetField(x,y));
-      break;
-    }
-    case 'singularity': {
-      GAME.arrays.wells.push(new Well(x,y));
-      cameraShake(6);
-      break;
-    }
+    case 'net': { GAME.arrays.nets.push(new NetField(x,y)); break; }
+    case 'shield': { GAME.arrays.shields.push(new Shield()); break; }
+    case 'nanites': { infectNearestWithNanites(x,y); break; }
+    case 'singularity': { GAME.arrays.wells.push(new Well(x,y)); cameraShake(6); break; }
+    case 'antimatter': { GAME.arrays.antimats.push(new AntiCore(x,y)); cameraShake(7); break; }
   }
   setCooldown(id);
 }
@@ -720,12 +911,6 @@ function fireRailAt(x,y, spreadRad){
   const x1=CORE.x+nx*(CORE.r), y1=CORE.y+ny*(CORE.r);
   const x2=CORE.x+nx*L, y2=CORE.y+ny*L;
   GAME.arrays.beams.push(new RailBeam(x1,y1,x2,y2));
-}
-
-function detonateNearestBomb(){
-  let best=null, bestD=1e9;
-  for(const b of GAME.arrays.bombs){ if(!b.alive) continue; const d=dist2(b.x,b.y,mouse.x,mouse.y); if(d<bestD){bestD=d; best=b;} }
-  if(best){ best.explode(); }
 }
 
 /* ---------- Overclock ---------- */
@@ -768,12 +953,11 @@ function renderLegend(){
     const unlocked = weaponUnlocked(id);
     const cd = cooldownFor(id);
     const cls = `row ${!unlocked?'locked':''} ${GAME.weapons.active===id?'active':''}`;
-    const key = i<5 ? (i+1) : '';
+    const key = (i<9) ? (i+1) : (i===9?'0':''); // 1..9, 0
     const name = WEAPON_INFO[id].name;
     const desc = WEAPON_INFO[id].desc;
-    const cdTxt = `CD ${cd.toFixed(2)}s`;
-    const lockNote = (!unlocked) ? ` · Unlocks @ ${UNLOCKS.find(u=>u.id===id).kills} kills` : '';
-    return `<div class="${cls}"><span class="key">[${key||'Q/E'}]</span> <b>${name}</b> — <span class="muted">${desc} · ${cdTxt}${lockNote}</span></div>`;
+    const lock = UNLOCKS.find(u=>u.id===id)?.kills ?? '—';
+    return `<div class="${cls}"><span class="key">[${key||'Q/E'}]</span> <b>${name}</b> — <span class="muted">${desc} · CD ${cd.toFixed(2)}s${!unlocked?` · Unlocks @ ${lock} kills`:''}</span></div>`;
   }).join('');
 }
 
@@ -785,7 +969,8 @@ function resetGame(seed){
   GAME.t=0; GAME.last=performance.now();
   GAME.score=0; GAME.wave=1; GAME.kills=0; CORE.integrity=3;
   GAME.focus=0; GAME.focusActive=false;
-  GAME.weapons.unlocked = new Set(['pulse']); GAME.weapons.active='pulse'; GAME.weapons.cd={pulse:0,nova:0,rail:0,net:0,singularity:0};
+  GAME.weapons.unlocked = new Set(['pulse']); GAME.weapons.active='pulse';
+  GAME.weapons.cd={pulse:0,nova:0,emp:0,rail:0,turret:0,net:0,shield:0,nanites:0,singularity:0,antimatter:0};
   recomputeTech();
   renderLegend(); updateHUD(); resize();
 }
@@ -799,11 +984,8 @@ function step(){
     GAME.focus=Math.max(0, GAME.focus-40*dt);
     if(GAME.focus<=0) GAME.focusActive=false;
   }
-  if(GAME.state==='play'){
-    update(dt); render(dt);
-  }else{
-    render(0);
-  }
+  if(GAME.state==='play'){ update(dt); render(dt); }
+  else{ render(0); }
   requestAnimationFrame(step);
 }
 
@@ -812,18 +994,23 @@ function update(dt){
   // cooldowns
   for(const id of Object.keys(GAME.weapons.cd)){ GAME.weapons.cd[id]=Math.max(0, GAME.weapons.cd[id]-dt); }
 
-  // bombs
-  for(let i=GAME.arrays.bombs.length-1;i>=0;i--){ const b=GAME.arrays.bombs[i]; if(!b.alive){ GAME.arrays.bombs.splice(i,1); continue; } b.update(dt); }
-  // explosions
-  for(let i=GAME.arrays.explosions.length-1;i>=0;i--){ const e=GAME.arrays.explosions[i]; if(!e.alive){ GAME.arrays.explosions.splice(i,1); continue; } e.update(dt); }
-  // beams
-  for(let i=GAME.arrays.beams.length-1;i>=0;i--){ const b=GAME.arrays.beams[i]; if(!b.alive){ GAME.arrays.beams.splice(i,1); continue; } b.update(dt); }
-  // nets
-  for(let i=GAME.arrays.nets.length-1;i>=0;i--){ const n=GAME.arrays.nets[i]; if(!n.alive){ GAME.arrays.nets.splice(i,1); continue; } n.update(dt); }
-  // wells
-  for(let i=GAME.arrays.wells.length-1;i>=0;i--){ const w=GAME.arrays.wells[i]; if(!w.alive){ GAME.arrays.wells.splice(i,1); continue; } w.update(dt); }
-  // nova shockwaves
-  for(let i=GAME.arrays.waves.length-1;i>=0;i--){ const wv=GAME.arrays.waves[i]; if(!wv.alive){ GAME.arrays.waves.splice(i,1); continue; } wv.update(dt); }
+  // bombs/explosions
+  forEachAlive(GAME.arrays.bombs, b=>b.update(dt));
+  forEachAlive(GAME.arrays.explosions, e=>e.update(dt));
+  // beams/nets/wells/waves
+  forEachAlive(GAME.arrays.beams, b=>b.update(dt));
+  forEachAlive(GAME.arrays.nets, n=>n.update(dt));
+  forEachAlive(GAME.arrays.wells, w=>w.update(dt));
+  forEachAlive(GAME.arrays.waves, wv=>wv.update(dt));
+  // EMPs
+  forEachAlive(GAME.arrays.emps, e=>e.update(dt));
+  // turrets & bullets
+  forEachAlive(GAME.arrays.turrets, t=>t.update(dt));
+  forEachAlive(GAME.arrays.bullets, b=>b.update(dt));
+  // shields
+  forEachAlive(GAME.arrays.shields, s=>s.update(dt));
+  // antimatter
+  forEachAlive(GAME.arrays.antimats, a=>a.update(dt));
 
   // enemies
   for(let i=GAME.arrays.enemies.length-1;i>=0;i--){
@@ -844,7 +1031,7 @@ function update(dt){
     const f=GAME.arrays.resonances[i]; f.t+=dt; if(f.t>f.life){ GAME.arrays.resonances.splice(i,1); continue; }
   }
 
-  // blast damage (for explosions only; waves/beams/nets apply internally)
+  // blast damage (explosions)
   handleBlastDamage();
 
   // spawn & wave pacing
@@ -857,6 +1044,9 @@ function update(dt){
   if(CORE.integrity<=0){ endGame(); return; }
 
   updateHUD();
+}
+function forEachAlive(arr, fn){
+  for(let i=arr.length-1;i>=0;i--){ const o=arr[i]; if(!o.alive){ arr.splice(i,1); continue; } fn(o); }
 }
 
 function handleBlastDamage(){
@@ -875,7 +1065,6 @@ function handleBlastDamage(){
 /* ---------- Rendering ---------- */
 function render(dt){
   const W=canvas.width, H=canvas.height;
-  // camera shake
   if(GAME.camera.shake>0) GAME.camera.shake*=0.9; else GAME.camera.shake=0;
   const sx=(GAME.rng()*2-1)*GAME.camera.shake, sy=(GAME.rng()*2-1)*GAME.camera.shake;
   ctx.setTransform(1,0,0,1, sx, sy);
@@ -901,21 +1090,20 @@ function render(dt){
     ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,TAU); ctx.stroke(); ctx.restore();
   }
 
-  // bombs
-  for(const b of GAME.arrays.bombs){ b.draw(); }
-  // nets
-  for(const n of GAME.arrays.nets){ n.draw(); }
-  // wells
-  for(const w of GAME.arrays.wells){ w.draw(); }
-  // explosions
-  for(const e of GAME.arrays.explosions){ e.draw(); }
-  // beams
-  for(const b of GAME.arrays.beams){ b.draw(); }
-  // nova waves
-  for(const w of GAME.arrays.waves){ w.draw(); }
-
+  // draw in effect order
+  drawAll(GAME.arrays.nets);
+  drawAll(GAME.arrays.wells);
+  drawAll(GAME.arrays.explosions);
+  drawAll(GAME.arrays.beams);
+  drawAll(GAME.arrays.waves);
+  drawAll(GAME.arrays.emps);
+  drawAll(GAME.arrays.antimats);
   // enemies
-  for(const e of GAME.arrays.enemies){ e.draw(); }
+  drawAll(GAME.arrays.enemies);
+  // turrets/bullets/shields
+  drawAll(GAME.arrays.turrets);
+  drawAll(GAME.arrays.bullets);
+  drawAll(GAME.arrays.shields);
 
   // particles
   for(const p of GAME.arrays.particles){
@@ -946,6 +1134,7 @@ function render(dt){
   ctx.beginPath(); ctx.arc(mouse.x,mouse.y,rr,0,TAU); ctx.stroke();
   ctx.restore();
 }
+function drawAll(arr){ for(const o of arr){ o.draw && o.draw(); } }
 
 /* ---------- Explosion spawner with chain logic ---------- */
 function spawnExplosion(x,y,checkRes=true){
