@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>AEGIS CORE — Orbital Commandlike</title>
+<title>AEGIS CORE — Orbital Commandlike (v3)</title>
 <style>
   :root{
     --bg:#070b16;--bg2:#0c1226;--ink:#e6ecff;--ink-dim:#9aa5c3;
@@ -12,7 +12,7 @@
     --shadow: 0 10px 30px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background: radial-gradient(1400px 900px at 70% 0%, var(--bg2), var(--bg)); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";}
+  html,body{margin:0;height:100%;background: radial-gradient(1400px 900px at 70% 0%, var(--bg2), var(--bg)); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans");}
   #wrap{position:fixed; inset:0; display:grid; grid-template-rows:auto 1fr}
   header{height:48px; display:flex; align-items:center; justify-content:space-between; padding:8px 12px; color:var(--ink-dim); user-select:none}
   header .brand{letter-spacing:.18em; font-weight:800; color:var(--ink); font-size:14px}
@@ -28,9 +28,8 @@
   .meter{position:relative; width:160px; height:10px; border-radius:6px; background:rgba(255,255,255,.08); overflow:hidden; border:1px solid rgba(255,255,255,.1)}
   .meter.small{width:120px}
   .meter .fill{position:absolute; inset:0; width:0%; background:linear-gradient(90deg,var(--a),var(--b)); box-shadow:0 0 12px rgba(95,210,255,.6) inset}
-
   #hud .right{position:absolute; top:8px; right:12px; display:flex; gap:8px}
-  #hud .legend{position:absolute; left:12px; bottom:18px; display:flex; flex-direction:column; gap:6px; width:min(520px, calc(100% - 24px))}
+  #hud .legend{position:absolute; left:12px; bottom:18px; display:flex; flex-direction:column; gap:6px; width:min(620px, calc(100% - 24px))}
   .legend .row{display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:10px; background:var(--glass); border:1px solid var(--glass-strong); backdrop-filter: blur(4px);}
   .legend .key{padding:2px 6px; border-radius:6px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); font-family:ui-monospace,monospace}
   .legend .locked{opacity:.5}
@@ -84,19 +83,22 @@
       <div class="pill"><span class="muted">Integrity</span> · <b id="hp">▣▣▣</b></div>
     </div>
 
-    <div class="core muted">Controls: Click deploy • <span class="kbd">Q/E</span> switch • <span class="kbd">1–5</span> direct select • <span class="kbd">Shift</span> Overclock • <span class="kbd">F</span> Fullscreen • <span class="kbd">Esc</span> Pause</div>
+    <div class="core muted">
+      Controls: Click deploy • <span class="kbd">Q/E</span> switch • <span class="kbd">1–5</span> select •
+      <span class="kbd">Shift</span> Overclock • <span class="kbd">F</span> Fullscreen • <span class="kbd">Esc</span> Pause
+    </div>
 
     <!-- Weapon Legend -->
     <div id="legend" class="legend"></div>
 
-    <div class="tip muted">Chain detonations inside faint resonance rings to amplify blast radius & score.</div>
+    <div class="tip muted">Detonate inside faint resonance rings to amplify blast radius & score.</div>
   </div>
 
   <!-- Overlay / Menu -->
   <div id="overlay" role="dialog" aria-modal="true">
     <div class="panel">
       <div class="big-title">AEGIS CORE</div>
-      <div class="subtitle">Missile‑command DNA, transformed: 360° orbital defense, deterministic tech unlocks, resonance chains, beams & singularities.</div>
+      <div class="subtitle">360° orbital defense with formula‑driven Tech upgrades—no pickups, only kills. Bigger blasts, nova shockwaves, dual rails, lockdown nets, and singularities.</div>
 
       <div class="section">
         <div class="btn-row">
@@ -122,14 +124,14 @@
         <div class="big-title">How to Play</div>
         <div class="subtitle">
           Enemies stream from the perimeter toward your central <b>Core</b>. Click to deploy your active weapon; switch with <b>Q/E</b> or <b>1–5</b>.
-          Kills advance <b>Tech</b> and automatically unlock stronger weapons. Build <b>resonance chains</b> by detonating inside the faint rings left by prior blasts—these enlarge explosion radius and boost score.
-          Use <b>Overclock</b> (<span class="kbd">Shift</span>) to slow time when charged.
+          Kills raise <b>Tech</b> and deterministically upgrade weapons. There are no pickups or random powerups.
+          Use <b>Overclock</b> (<span class="kbd">Shift</span>) to slow time when charged. Press <span class="kbd">F</span> for fullscreen.
         </div>
       </div>
       <div class="section muted" style="font-size:12px">
         <span class="tag">No Audio</span> This build intentionally includes no sound or music.
         <span class="tag">Persistence</span> Uses localStorage for best score & settings.
-        <span class="tag">Version</span> 2.0
+        <span class="tag">Version</span> 3.0
       </div>
     </div>
   </div>
@@ -137,15 +139,17 @@
 
 <script>
 /* ===========================
-   AEGIS CORE — Orbital Commandlike
-   Big changes vs missile‑defender:
-   - 360° defense around a center Core (no ground).
-   - Tech tiers auto‑unlock by total kills (no pickups).
-   - Advanced weapons: Pulse, Arc Mesh, Rail Lance, Orbital Net, Singularity.
-   - Much larger explosions + resonance chain amplification.
-   - Random enemy speeds per spawn via Director.
-   - Fullscreen (F). Legend shows weapon keys.
-   - No audio.
+   AEGIS CORE v3 — Orbital Commandlike
+   Upgrades are formula-driven, strictly kill-gated, and monotonic:
+     - Tech level L = floor(kills / 20)
+     - Each weapon’s stats derive from L; big feature toggles at breakpoints.
+   Weapons:
+     1) Pulse Bomb (explosive; huge radius; echoes at higher Tech)
+     2) Nova Ring (expanding shockwave ring)
+     3) Rail Lance (beam; dual rails at higher Tech)
+     4) Lockdown Net (expanding lattice; slows → roots at high Tech)
+     5) Singularity (gravity well → massive blast)
+   No audio. Fullscreen with 'F'.
    =========================== */
 
 /* ---------- Utilities ---------- */
@@ -161,7 +165,7 @@ function mulberry32(seed){ let t=seed>>>0; return function(){ t+=0x6D2B79F5; t=M
 function strToSeed(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
 
 /* ---------- Save ---------- */
-const SAVE_KEY='aegis_core_v2';
+const SAVE_KEY='aegis_core_v3';
 let SAVE = JSON.parse(localStorage.getItem(SAVE_KEY)||'{}');
 if(!SAVE.settings){ SAVE.settings = { particles:true, shake:true, colorblind:false, flashes:true, difficulty:'normal' }; }
 if(!SAVE.stats){ SAVE.stats = { games:0, best:0, totalScore:0, totalKills:0 }; }
@@ -184,56 +188,78 @@ const scoreEl=$('#score'), waveEl=$('#wave'), bestEl=$('#best'), killsEl=$('#kil
 const legendEl=$('#legend');
 
 /* ---------- Game State ---------- */
-const CORE={x:0,y:0,r:22, integrity:3}; // radius scaled with DPR on start
+const CORE={x:0,y:0,r:22, integrity:3};
 const GAME={
   state:'menu',
   rng: mulberry32(strToSeed('endless')),
   seed:'endless',
   t:0, last:performance.now(),
   score:0, wave:1,
-  kills:0, // session kills
-  arrays:{ enemies:[], bombs:[], explosions:[], arcs:[], beams:[], nets:[], wells:[], particles:[], rings:[] },
+  kills:0,
+  arrays:{ enemies:[], bombs:[], explosions:[], beams:[], nets:[], wells:[], particles:[], resonances:[], flashes:[], waves:[] },
   focus:0, focusMax:100, focusActive:false,
   director:{ t:0, spawnT:0, every:1.0, sMin:80, sMax:160 },
   weapons:{
-    order:['pulse','arc','rail','net','singularity'],
+    order:['pulse','nova','rail','net','singularity'],
     unlocked:new Set(['pulse']),
     active:'pulse',
-    cd:{pulse:0, arc:0, rail:0, net:0, singularity:0}
+    cd:{pulse:0, nova:0, rail:0, net:0, singularity:0}
   },
-  tech:{ level:0, // increments when passing thresholds
-         mods:{ pulseMult:1.0, arcTargets:3, railWidth:10, netSlow:0.55, wellPull:140 } // logical defaults
-  },
+  tech:{ level:0, mods:{}, flags:{} },
   camera:{shake:0}
 };
 CORE.r = 22*DPR;
 
-/* ---------- Tech Tiers (auto, deterministic) ---------- */
-const TIERS=[
-  {kills:0,   note:'Pulse Bomb Mk I', mods:{pulseMult:1.0}},
-  {kills:10,  unlock:'arc',           mods:{pulseMult:1.18}},          // bigger boom early
-  {kills:25,  unlock:'rail'},
-  {kills:45,  unlock:'net',           mods:{arcTargets:4}},
-  {kills:70,  note:'Pulse Bomb Mk II',mods:{pulseMult:1.35}},
-  {kills:100, unlock:'singularity',   mods:{wellPull:180}},
-  {kills:140, note:'Rail width+',     mods:{railWidth:12}},
-  {kills:180, note:'Net slow+',       mods:{netSlow:0.45}},
-  {kills:240, note:'Pulse Bomb Mk III',mods:{pulseMult:1.55, arcTargets:5}}
+/* ---------- Unlocks & Tech formulas ---------- */
+// Unlock thresholds are absolute kills (no RNG).
+const UNLOCKS = [
+  {kills:0,    id:'pulse'},
+  {kills:15,   id:'nova'},
+  {kills:35,   id:'rail'},
+  {kills:60,   id:'net'},
+  {kills:100,  id:'singularity'}
 ];
-function applyTier(tier){
-  if(tier.unlock) GAME.weapons.unlocked.add(tier.unlock);
-  if(tier.mods){ Object.assign(GAME.tech.mods, tier.mods); }
-}
-function maybeAdvanceTech(){
-  while(GAME.tech.level+1 < TIERS.length && GAME.kills >= TIERS[GAME.tech.level+1].kills){
-    GAME.tech.level++;
-    applyTier(TIERS[GAME.tech.level]);
-    // Auto‑select the newest unlock if any:
-    const u = TIERS[GAME.tech.level].unlock;
-    if(u){ GAME.weapons.active=u; }
-    renderLegend();
+// Tech level L = floor(kills/20). Stats derive from L:
+function recomputeTech(){
+  const L = Math.floor(GAME.kills/20);
+  if(L!==GAME.tech.level){
+    GAME.tech.level=L;
   }
+  // strictly increasing or tightening parameters
+  GAME.tech.mods = {
+    // Pulse explosion multiplier (base radius * this)
+    pulseMult: 1.0 + 0.12*Math.min(L,7) + 0.02*Math.max(0,L-7), // gentle taper at high L
+    // Nova shockwave
+    waveSpeed: 260 + 18*L,
+    waveThick: (12 + 1.2*L)*DPR,
+    // Rail
+    railWidth: Math.min(24, 10 + 2*L)*DPR,
+    // Net
+    netSlow: Math.max(0.30, 0.55 - 0.02*L), // lower is stronger
+    // Singularity
+    wellPull: 140 + 18*L,
+    finalBlastMult: 1.0 + 0.08*L // final pop scales
+  };
+  GAME.tech.flags = {
+    pulseEcho: L>=4,         // Pulse spawns a nova ring echo
+    waveDouble: L>=7,        // Nova spawns a delayed second ring
+    railDual:  L>=9,         // Two rails with slight spread
+    netRoot:   L>=11 ? 0.35 : 0 // Net briefly roots near center (seconds)
+  };
+  // Ensure unlocks based on kills
+  for(const u of UNLOCKS){ if(GAME.kills>=u.kills) GAME.weapons.unlocked.add(u.id); }
+  renderLegend();
 }
+
+// Cooldowns scale down with level; Singularity scales less so.
+const BASE_CD = { pulse:0.45, nova:1.6, rail:2.0, net:3.0, singularity:5.2 };
+function cooldownFor(id){
+  const L = GAME.tech.level;
+  const base = BASE_CD[id];
+  const perLevel = (id==='singularity') ? 0.985 : 0.96; // singularity cools slower
+  return base * Math.pow(perLevel, L);
+}
+function setCooldown(id){ GAME.weapons.cd[id]=cooldownFor(id); }
 
 /* ---------- Settings Panel ---------- */
 function renderSettings(){
@@ -284,7 +310,7 @@ function applyPalette(){
 let mouse={x:0,y:0, down:false};
 canvas.addEventListener('mousemove', e=>{ const b=canvas.getBoundingClientRect(); mouse.x=(e.clientX-b.left)*DPR; mouse.y=(e.clientY-b.top)*DPR; }, {passive:true});
 canvas.addEventListener('mousedown', e=>{ e.preventDefault(); if(e.button===0){ fireActive(mouse.x, mouse.y); } }, {passive:false});
-addEventListener('contextmenu', e=>{ e.preventDefault(); /* reserved: could add alt‑action per weapon if desired */ });
+addEventListener('contextmenu', e=>{ e.preventDefault(); });
 
 let keys={};
 addEventListener('keydown', e=>{
@@ -316,7 +342,6 @@ class Enemy{
     this.age+=dt;
     // behaviors
     if(this.type==='dasher'){
-      // bursts near core
       const d=Math.hypot(this.x-CORE.x, this.y-CORE.y);
       const mult = d<200*DPR?1.7:1.0;
       this.x+=this.vx*dt*mult; this.y+=this.vy*dt*mult;
@@ -346,7 +371,7 @@ class Enemy{
     this.alive=false;
     GAME.kills++; SAVE.stats.totalKills++;
     GAME.score += 10;
-    maybeAdvanceTech();
+    recomputeTech();
     particleBurst(this.x,this.y, 10, 'kill');
     // splitter spawns fragments
     if(this.type==='splitter'){
@@ -395,14 +420,17 @@ class Bomb{
     if(!this.alive) return;
     this.alive=false;
     spawnExplosion(this.x,this.y,true);
+    if(GAME.tech.flags.pulseEcho){ // pulse emits a nova echo at higher tech
+      GAME.arrays.waves.push(new ShockWave(this.x,this.y,{r0:14*DPR}));
+    }
   }
 }
 class Explosion{
   constructor(x,y,chainBoost=0){
     this.x=x; this.y=y; this.t=0; this.life=0.6;
-    const base=86*DPR; // MUCH bigger baseline
+    const base=100*DPR; // large baseline
     const r = base * GAME.tech.mods.pulseMult;
-    this.rMax = clamp(r * (1 + 0.25*chainBoost), base*0.9, base*3.0); // chain amps radius
+    this.rMax = clamp(r * (1 + 0.25*chainBoost), base*0.9, base*3.2);
     this.r=1; this.alive=true;
   }
   update(dt){
@@ -426,37 +454,41 @@ class Explosion{
     ctx.restore();
   }
 }
-class ArcField{ // lightning burst to nearest enemies
-  constructor(x,y){
-    this.x=x; this.y=y; this.t=0; this.life=0.25;
-    this.targets=[]; this.alive=true;
-    const R=180*DPR; const cap=GAME.tech.mods.arcTargets|0;
-    // pick nearest up to cap
-    const candidates=GAME.arrays.enemies.filter(e=>e.alive).map(e=>({e,d:Math.hypot(e.x-x,e.y-y)})).filter(o=>o.d<=R).sort((a,b)=>a.d-b.d).slice(0,cap);
-    for(const c of candidates){ this.targets.push(c.e); c.e.hit(1); GAME.score+=5; particleBurst(c.e.x,c.e.y,6,'kill'); }
+// Expanding shockwave ring (Nova)
+class ShockWave{
+  constructor(x,y,opts={}){
+    this.x=x; this.y=y; this.t=0; this.life=0.9; this.alive=true;
+    this.r=opts.r0 || 6*DPR;
+    this.speed = GAME.tech.mods.waveSpeed;
+    this.thick = GAME.tech.mods.waveThick;
+    this.secondDelay = (GAME.tech.flags.waveDouble && !opts.secondary) ? 0.12 : null;
   }
-  update(dt){ this.t+=dt; if(this.t>this.life) this.alive=false; }
+  update(dt){
+    this.t+=dt; this.r += this.speed*dt;
+    // damage on ring contact
+    for(const en of GAME.arrays.enemies){
+      if(!en.alive) continue;
+      const d=Math.hypot(en.x-this.x,en.y-this.y);
+      if(Math.abs(d - this.r) <= this.thick*0.55){ en.hit(2); GAME.score+=4; }
+    }
+    if(this.secondDelay!=null){
+      this.secondDelay-=dt; if(this.secondDelay<=0){ this.secondDelay=null; GAME.arrays.waves.push(new ShockWave(this.x,this.y,{r0:this.r*0.6,secondary:true})); }
+    }
+    if(this.t>=this.life || this.r>Math.max(canvas.width,canvas.height)) this.alive=false;
+  }
   draw(){
     ctx.save(); ctx.globalCompositeOperation='lighter';
-    ctx.lineWidth=2*DPR; ctx.strokeStyle='rgba(165,107,255,.8)';
-    for(const e of this.targets){
-      ctx.beginPath(); ctx.moveTo(this.x,this.y);
-      // jagged polyline
-      const seg=4; let px=this.x, py=this.y;
-      for(let i=1;i<seg;i++){
-        const t=i/seg; const nx=lerp(this.x,e.x,t)+(Math.random()-0.5)*10*DPR; const ny=lerp(this.y,e.y,t)+(Math.random()-0.5)*10*DPR;
-        ctx.lineTo(nx,ny); px=nx; py=ny;
-      }
-      ctx.lineTo(e.x,e.y); ctx.stroke();
-    }
+    ctx.lineWidth=this.thick; ctx.strokeStyle='rgba(100,210,255,.55)';
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,TAU); ctx.stroke();
     ctx.restore();
   }
 }
+
 class RailBeam{
   constructor(x0,y0,x1,y1){
     this.x0=x0; this.y0=y0; this.x1=x1; this.y1=y1;
     this.t=0; this.life=0.12; this.alive=true;
-    this.width=GAME.tech.mods.railWidth*DPR;
+    this.width=GAME.tech.mods.railWidth;
     // apply immediate damage to enemies crossing
     for(const en of GAME.arrays.enemies){
       if(!en.alive) continue;
@@ -475,21 +507,29 @@ class RailBeam{
 class NetField{
   constructor(x,y){
     this.x=x; this.y=y; this.t=0; this.life=1.7; this.alive=true;
-    this.r=0; this.rMax=160*DPR;
-    this.slow=GAME.tech.mods.netSlow;
+    this.r=0; this.rMax=170*DPR;
+    this.slow=GAME.tech.mods.netSlow; // 0.55 .. 0.30
     this.tick=0;
   }
   update(dt){
     this.t+=dt; const p=clamp(this.t/this.life,0,1);
     this.r=this.rMax*easeOutQuad(Math.min(1,p*1.2));
     this.tick+=dt;
-    // slow & damage over time
+    const rootWindow = GAME.tech.flags.netRoot; // seconds at start where root is active near center
     for(const en of GAME.arrays.enemies){
       if(!en.alive) continue;
-      const d2=dist2(en.x,en.y,this.x,this.y);
-      if(d2 <= (this.r+en.r)*(this.r+en.r)){
+      const d2e=dist2(en.x,en.y,this.x,this.y);
+      if(d2e <= (this.r+en.r)*(this.r+en.r)){
+        // slow everywhere in the net
         en.x -= en.vx*dt*(1-this.slow);
         en.y -= en.vy*dt*(1-this.slow);
+        // root near the center during early window
+        if(rootWindow && this.t<rootWindow){
+          const d=Math.sqrt(d2e);
+          if(d <= this.r*0.33){
+            en.x -= en.vx*dt; en.y -= en.vy*dt; // force near-stasis
+          }
+        }
         if(this.tick>=0.16){ en.hit(1); GAME.score+=2; }
       }
     }
@@ -498,10 +538,9 @@ class NetField{
   }
   draw(){
     ctx.save(); ctx.globalCompositeOperation='lighter';
-    ctx.lineWidth=1.2*DPR; ctx.strokeStyle='rgba(100,210,255,.45)';
-    // draw wireframe circle
+    ctx.lineWidth=1.4*DPR; ctx.strokeStyle='rgba(100,210,255,.45)';
     ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,TAU); ctx.stroke();
-    // cross‑lattice
+    // lattice arms
     for(let i=0;i<6;i++){
       const a=i*(TAU/6);
       ctx.beginPath();
@@ -514,30 +553,33 @@ class NetField{
 }
 class Well{
   constructor(x,y){
-    this.x=x; this.y=y; this.t=0; this.life=0.95; this.alive=true; this.pull=GAME.tech.mods.wellPull;
-    this.r=20*DPR;
+    this.x=x; this.y=y; this.t=0; this.life=1.05; this.alive=true; this.pull=GAME.tech.mods.wellPull;
+    this.r=26*DPR;
   }
   update(dt){
     this.t+=dt;
-    this.r = 30*DPR + this.t/this.life * 110*DPR;
+    this.r = 38*DPR + this.t/this.life * 130*DPR;
     for(const en of GAME.arrays.enemies){
       if(!en.alive) continue;
       const dx=this.x-en.x, dy=this.y-en.y;
       const d=Math.hypot(dx,dy)||1;
       if(d<this.r*1.2){
-        const f=(this.pull/d)*dt;
+        const f=(this.pull/d)*dt; // stronger with Tech
         en.vx+=dx/d*f; en.vy+=dy/d*f;
       }
     }
     if(this.t>=this.life){
       this.alive=false;
-      spawnExplosion(this.x,this.y,true); // culminates in a big detonation
+      // final blast scales with Tech
+      const ex = new Explosion(this.x,this.y,0);
+      ex.rMax *= GAME.tech.mods.finalBlastMult;
+      GAME.arrays.explosions.push(ex);
       cameraShake(8);
     }
   }
   draw(){
     ctx.save(); ctx.globalCompositeOperation='lighter';
-    ctx.lineWidth=1.5*DPR; ctx.strokeStyle='rgba(165,107,255,.7)';
+    ctx.lineWidth=1.6*DPR; ctx.strokeStyle='rgba(165,107,255,.7)';
     ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,TAU); ctx.stroke();
     ctx.restore();
   }
@@ -560,12 +602,10 @@ function particleBurst(x,y,n,mode='kill'){
     GAME.arrays.particles.push({x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, t:0, life:.8, size:(mode==='kill'?2:1.6)*DPR, mode});
   }
 }
-function flashRing(x,y,r){
-  GAME.arrays.rings.push({x,y,r, t:0, life:.2});
-}
+function flashRing(x,y,r){ GAME.arrays.flashes.push({x,y,r, t:0, life:.2}); }
 
 /* ---------- Resonance ---------- */
-function spawnResonance(x,y,r){ GAME.arrays.resonances = GAME.arrays.resonances||[]; GAME.arrays.resonances.push({x,y,r,t:0,life:3}); }
+function spawnResonance(x,y,r){ GAME.arrays.resonances.push({x,y,r,t:0,life:3}); }
 
 /* ---------- Director & Spawning ---------- */
 function randomEnemyType(){
@@ -585,7 +625,6 @@ function spawnFromPerimeter(){
 
   const type=randomEnemyType();
   const speed=lerp(GAME.director.sMin, GAME.director.sMax, GAME.rng()); // random speeds per enemy
-  // target to core
   const dx=cx-sx, dy=cy-sy; const len=Math.hypot(dx,dy)||1;
   const vx=dx/len*speed, vy=dy/len*speed;
   const hp=(type==='shield')?2:1;
@@ -619,28 +658,24 @@ function updateDirector(dt){
 
 /* ---------- Weapons control ---------- */
 const WEAPON_INFO={
-  pulse:{name:'Pulse Bomb', desc:'Deploy explosive; huge blast. Click again to detonate early.', cooldown:0.4},
-  arc:{name:'Arc Mesh', desc:'Chains lightning to nearby targets.', cooldown:1.6},
-  rail:{name:'Rail Lance', desc:'Piercing beam from Core toward cursor.', cooldown:2.0},
-  net:{name:'Orbital Net', desc:'Expanding lattice slows & damages.', cooldown:3.0},
-  singularity:{name:'Singularity', desc:'Temporary gravity well → massive blast.', cooldown:5.0},
+  pulse:{name:'Pulse Bomb', desc:'Massive explosion at cursor; resonates. Click again near a bomb to detonate early.'},
+  nova:{name:'Nova Ring', desc:'Expanding shockwave ring that damages on contact.'},
+  rail:{name:'Rail Lance', desc:'Piercing beam from Core toward cursor (dual rails at higher Tech).'},
+  net:{name:'Lockdown Net', desc:'Expanding lattice that slows; briefly roots near center at high Tech.'},
+  singularity:{name:'Singularity', desc:'Temporary gravity well culminating in a huge blast.'},
 };
 function weaponUnlocked(id){ return GAME.weapons.unlocked.has(id); }
-function setCooldown(id){ GAME.weapons.cd[id]=WEAPON_INFO[id].cooldown; }
 function cycleWeapon(dir){
   const order=GAME.weapons.order;
   let idx = order.indexOf(GAME.weapons.active);
-  // find next unlocked
   for(let i=1;i<=order.length;i++){
     let j = (idx + dir*i + order.length) % order.length;
     if(weaponUnlocked(order[j])){ GAME.weapons.active=order[j]; break; }
   }
   renderLegend();
 }
-function selectWeapon(n){ // 1-based
-  const id=GAME.weapons.order[n-1]; if(!id) return;
-  if(weaponUnlocked(id)){ GAME.weapons.active=id; renderLegend(); }
-}
+function selectWeapon(n){ const id=GAME.weapons.order[n-1]; if(id && weaponUnlocked(id)){ GAME.weapons.active=id; renderLegend(); } }
+
 function fireActive(x,y){
   if(GAME.state!=='play') return;
   const id=GAME.weapons.active;
@@ -648,22 +683,20 @@ function fireActive(x,y){
   switch(id){
     case 'pulse': {
       const b=new Bomb(CORE.x,CORE.y,x,y); GAME.arrays.bombs.push(b);
-      // Store reference so second click detonates nearest bomb
-      // (optional: right now, second click detonates any bomb near cursor)
       break;
     }
-    case 'arc': {
-      GAME.arrays.arcs.push(new ArcField(x,y));
+    case 'nova': {
+      GAME.arrays.waves.push(new ShockWave(x,y));
       break;
     }
     case 'rail': {
-      // beam from core toward cursor length to edge
-      const dx=x-CORE.x, dy=y-CORE.y; const len=Math.hypot(dx,dy)||1;
-      const nx=dx/len, ny=dy/len;
-      const L = Math.max(canvas.width, canvas.height);
-      const x1=CORE.x+nx*(CORE.r), y1=CORE.y+ny*(CORE.r);
-      const x2=CORE.x+nx*L, y2=CORE.y+ny*L;
-      GAME.arrays.beams.push(new RailBeam(x1,y1,x2,y2));
+      // primary beam
+      fireRailAt(x,y,0);
+      // dual rails at high Tech (slight angular spread)
+      if(GAME.tech.flags.railDual){
+        fireRailAt(x,y, 0.05);
+        fireRailAt(x,y,-0.05);
+      }
       cameraShake(5);
       break;
     }
@@ -678,8 +711,17 @@ function fireActive(x,y){
     }
   }
   setCooldown(id);
-  // combo/overclock charge on kills, not here
 }
+function fireRailAt(x,y, spreadRad){
+  const dx=x-CORE.x, dy=y-CORE.y; const len=Math.hypot(dx,dy)||1;
+  let ang=Math.atan2(dy,dx)+spreadRad;
+  const nx=Math.cos(ang), ny=Math.sin(ang);
+  const L = Math.max(canvas.width, canvas.height);
+  const x1=CORE.x+nx*(CORE.r), y1=CORE.y+ny*(CORE.r);
+  const x2=CORE.x+nx*L, y2=CORE.y+ny*L;
+  GAME.arrays.beams.push(new RailBeam(x1,y1,x2,y2));
+}
+
 function detonateNearestBomb(){
   let best=null, bestD=1e9;
   for(const b of GAME.arrays.bombs){ if(!b.alive) continue; const d=dist2(b.x,b.y,mouse.x,mouse.y); if(d<bestD){bestD=d; best=b;} }
@@ -724,14 +766,14 @@ function renderLegend(){
   const order=GAME.weapons.order;
   legendEl.innerHTML = order.map((id,i)=>{
     const unlocked = weaponUnlocked(id);
-    const cd = GAME.weapons.cd[id]||0;
+    const cd = cooldownFor(id);
     const cls = `row ${!unlocked?'locked':''} ${GAME.weapons.active===id?'active':''}`;
     const key = i<5 ? (i+1) : '';
     const name = WEAPON_INFO[id].name;
     const desc = WEAPON_INFO[id].desc;
-    const cdTxt = cd>0 ? ` · CD ${cd.toFixed(1)}s` : '';
-    const lockNote = (!unlocked) ? ` · Unlocks @ ${TIERS.find(t=>t.unlock===id)?.kills||'—'} kills` : '';
-    return `<div class="${cls}"><span class="key">[${key||'Q/E'}]</span> <b>${name}</b> — <span class="muted">${desc}${cdTxt}${lockNote}</span></div>`;
+    const cdTxt = `CD ${cd.toFixed(2)}s`;
+    const lockNote = (!unlocked) ? ` · Unlocks @ ${UNLOCKS.find(u=>u.id===id).kills} kills` : '';
+    return `<div class="${cls}"><span class="key">[${key||'Q/E'}]</span> <b>${name}</b> — <span class="muted">${desc} · ${cdTxt}${lockNote}</span></div>`;
   }).join('');
 }
 
@@ -739,29 +781,24 @@ function renderLegend(){
 function resetGame(seed){
   GAME.state='play'; overlay.classList.remove('show');
   GAME.rng=mulberry32(strToSeed(seed||'endless')); GAME.seed=seed;
-  // clear
   for(const k in GAME.arrays){ if(Array.isArray(GAME.arrays[k])) GAME.arrays[k].length=0; }
   GAME.t=0; GAME.last=performance.now();
   GAME.score=0; GAME.wave=1; GAME.kills=0; CORE.integrity=3;
   GAME.focus=0; GAME.focusActive=false;
-  GAME.weapons.unlocked = new Set(['pulse']); GAME.weapons.active='pulse'; GAME.weapons.cd={pulse:0,arc:0,rail:0,net:0,singularity:0};
-  GAME.tech.level=0; GAME.tech.mods={ pulseMult:1.0, arcTargets:3, railWidth:10, netSlow:0.55, wellPull:140 };
-  applyTier(TIERS[0]);
-  renderLegend(); updateHUD();
+  GAME.weapons.unlocked = new Set(['pulse']); GAME.weapons.active='pulse'; GAME.weapons.cd={pulse:0,nova:0,rail:0,net:0,singularity:0};
+  recomputeTech();
+  renderLegend(); updateHUD(); resize();
 }
 
 /* ---------- Main Loop ---------- */
 function step(){
   const now=performance.now(); let dt=(now-GAME.last)/1000; GAME.last=now;
-  dt=Math.min(dt, 0.035); // clamp long frames
-
-  // Overclock (slow‑mo)
+  dt=Math.min(dt, 0.035);
   if(GAME.focusActive){
     dt*=0.35;
     GAME.focus=Math.max(0, GAME.focus-40*dt);
     if(GAME.focus<=0) GAME.focusActive=false;
   }
-
   if(GAME.state==='play'){
     update(dt); render(dt);
   }else{
@@ -777,21 +814,16 @@ function update(dt){
 
   // bombs
   for(let i=GAME.arrays.bombs.length-1;i>=0;i--){ const b=GAME.arrays.bombs[i]; if(!b.alive){ GAME.arrays.bombs.splice(i,1); continue; } b.update(dt); }
-
   // explosions
   for(let i=GAME.arrays.explosions.length-1;i>=0;i--){ const e=GAME.arrays.explosions[i]; if(!e.alive){ GAME.arrays.explosions.splice(i,1); continue; } e.update(dt); }
-
   // beams
   for(let i=GAME.arrays.beams.length-1;i>=0;i--){ const b=GAME.arrays.beams[i]; if(!b.alive){ GAME.arrays.beams.splice(i,1); continue; } b.update(dt); }
-
-  // arcs
-  for(let i=GAME.arrays.arcs.length-1;i>=0;i--){ const a=GAME.arrays.arcs[i]; if(!a.alive){ GAME.arrays.arcs.splice(i,1); continue; } a.update(dt); }
-
   // nets
   for(let i=GAME.arrays.nets.length-1;i>=0;i--){ const n=GAME.arrays.nets[i]; if(!n.alive){ GAME.arrays.nets.splice(i,1); continue; } n.update(dt); }
-
   // wells
   for(let i=GAME.arrays.wells.length-1;i>=0;i--){ const w=GAME.arrays.wells[i]; if(!w.alive){ GAME.arrays.wells.splice(i,1); continue; } w.update(dt); }
+  // nova shockwaves
+  for(let i=GAME.arrays.waves.length-1;i>=0;i--){ const wv=GAME.arrays.waves[i]; if(!wv.alive){ GAME.arrays.waves.splice(i,1); continue; } wv.update(dt); }
 
   // enemies
   for(let i=GAME.arrays.enemies.length-1;i>=0;i--){
@@ -803,33 +835,26 @@ function update(dt){
     const p=GAME.arrays.particles[i]; p.t+=dt; if(p.t>p.life){ GAME.arrays.particles.splice(i,1); continue; }
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx *= (1-1.6*dt); p.vy *= (1-1.6*dt); p.vy += 12*dt;
   }
-
-  // rings (flashes)
-  GAME.arrays.rings = GAME.arrays.rings||[];
-  for(let i=GAME.arrays.rings.length-1;i>=0;i--){
-    const r=GAME.arrays.rings[i]; r.t+=dt; if(r.t>r.life){ GAME.arrays.rings.splice(i,1); continue; }
+  // flashes
+  for(let i=GAME.arrays.flashes.length-1;i>=0;i--){
+    const r=GAME.arrays.flashes[i]; r.t+=dt; if(r.t>r.life){ GAME.arrays.flashes.splice(i,1); continue; }
   }
-
-  // resonance advance (for drawing + chain bonus checks)
-  GAME.arrays.resonances = GAME.arrays.resonances||[];
+  // resonances
   for(let i=GAME.arrays.resonances.length-1;i>=0;i--){
     const f=GAME.arrays.resonances[i]; f.t+=dt; if(f.t>f.life){ GAME.arrays.resonances.splice(i,1); continue; }
   }
 
-  // apply blast damage (visuals == logic)
+  // blast damage (for explosions only; waves/beams/nets apply internally)
   handleBlastDamage();
 
   // spawn & wave pacing
   updateDirector(dt);
 
-  // gain Overclock on kills indirectly via enemies.kill(); here we softly regenerate a bit over time
+  // Overclock trickle
   GAME.focus = clamp(GAME.focus + 6*dt, 0, GAME.focusMax);
 
   // end?
-  if(CORE.integrity<=0){
-    endGame();
-    return;
-  }
+  if(CORE.integrity<=0){ endGame(); return; }
 
   updateHUD();
 }
@@ -862,14 +887,14 @@ function render(dt){
     ctx.fillStyle=`rgba(255,255,255,${0.03 + (i%5)*0.01})`;
     ctx.fillRect(px,py,2*DPR,2*DPR);
   }
-  // concentric orbital grid
+  // orbital grid
   ctx.save(); ctx.globalAlpha=0.35;
   ctx.strokeStyle='rgba(100,210,255,.25)'; ctx.lineWidth=1*DPR;
   for(let r=CORE.r*2; r<=Math.max(W,H)*0.6; r+=80*DPR){ ctx.beginPath(); ctx.arc(CORE.x,CORE.y,r,0,TAU); ctx.stroke(); }
   ctx.restore();
 
   // resonance rings
-  for(const f of (GAME.arrays.resonances||[])){
+  for(const f of GAME.arrays.resonances){
     const a=1-(f.t/f.life);
     ctx.save(); ctx.globalCompositeOperation='lighter';
     ctx.lineWidth=1.4*DPR; ctx.strokeStyle=`rgba(100,210,255,${.18*a})`;
@@ -886,8 +911,8 @@ function render(dt){
   for(const e of GAME.arrays.explosions){ e.draw(); }
   // beams
   for(const b of GAME.arrays.beams){ b.draw(); }
-  // arcs
-  for(const a of GAME.arrays.arcs){ a.draw(); }
+  // nova waves
+  for(const w of GAME.arrays.waves){ w.draw(); }
 
   // enemies
   for(const e of GAME.arrays.enemies){ e.draw(); }
@@ -900,8 +925,8 @@ function render(dt){
     ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,TAU); ctx.fill(); ctx.restore();
   }
 
-  // rings (flashes)
-  for(const r of (GAME.arrays.rings||[])){
+  // flashes
+  for(const r of GAME.arrays.flashes){
     const a=1-(r.t/r.life);
     ctx.save(); ctx.globalCompositeOperation='lighter';
     ctx.lineWidth=2*DPR; ctx.strokeStyle=`rgba(255,255,255,${.25*a})`;
@@ -925,7 +950,7 @@ function render(dt){
 /* ---------- Explosion spawner with chain logic ---------- */
 function spawnExplosion(x,y,checkRes=true){
   let boost=0;
-  if(checkRes && GAME.arrays.resonances){
+  if(checkRes){
     for(const f of GAME.arrays.resonances){
       if(dist2(x,y,f.x,f.y) <= f.r*f.r) boost++;
     }
@@ -948,18 +973,12 @@ applyPalette(); resize(); renderSettings(); renderStats(); renderLegend();
 toggleMenu(true);
 requestAnimationFrame(step);
 
-/* ---------- Extra: second click detonates nearest bomb ---------- */
+/* ---------- Extra: detonate nearest bomb on 2nd click ---------- */
 addEventListener('mousedown', e=>{
-  if(e.button===0 && GAME.state==='play'){
-    // if a bomb is flying near cursor and active weapon is pulse, second click prioritizes detonation
-    if(GAME.weapons.active==='pulse'){
-      // if any bomb near cursor within 32px, detonate instead of spawning new
-      let hit=null; let best=1e9;
-      for(const b of GAME.arrays.bombs){ if(!b.alive) continue; const d=dist2(b.x,b.y,mouse.x,mouse.y); if(d<best){best=d; hit=b;} }
-      if(hit && Math.sqrt(best)<=32*DPR){ hit.explode(); // prevent double spawn
-        // prevent default handled earlier
-      }
-    }
+  if(e.button===0 && GAME.state==='play' && GAME.weapons.active==='pulse'){
+    let nearest=null, best=1e9;
+    for(const b of GAME.arrays.bombs){ if(!b.alive) continue; const d=dist2(b.x,b.y,mouse.x,mouse.y); if(d<best){best=d; nearest=b;} }
+    if(nearest && Math.sqrt(best)<=32*DPR){ nearest.explode(); }
   }
 }, {passive:true});
 </script>
