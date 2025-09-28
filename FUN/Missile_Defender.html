@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+<title>Asteroid Bastion — Missile Defense</title>
+<style>
+  :root{
+    --bg:#081024;
+    --panel:#0c1230cc;
+    --panel-strong:#0d1437e6;
+    --text:#e7f1ff;
+    --muted:#9fb0d8;
+    --accent:#6fe1ff;
+    --ok:#9aff7a;
+    --danger:#ff6b6b;
+    --edge:#2b3f9a;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:radial-gradient(1600px 900px at 50% 10%,#131a3f,#0b122c 55%,#060a18)}
+  body{color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  #game-container{position:relative;display:flex;align-items:center;justify-content:center;height:100vh;width:100vw;overflow:hidden}
+
+  /* Honor [hidden] regardless of CSS display */
+  [hidden]{display:none !important;}
+
+  /* Canvas sits under UI; transparent until we paint */
+  canvas#game{display:block;image-rendering:crisp-edges;image-rendering:pixelated;outline:none;position:relative;z-index:1;background:transparent}
+
+  /* UI (menus/overlays) above canvas */
+  #ui{position:absolute;inset:0;z-index:2;pointer-events:auto}
+
+  /* Futuristic panel */
+  .panel{
+    position:absolute;inset:auto 0 0 0;margin:auto;max-width:min(760px,92vw);
+    color:var(--text);background:linear-gradient(180deg,#0b1331ee,#0a1028dd);
+    border:1px solid #2b3577;border-radius:14px;box-shadow:0 28px 120px #000b;
+    padding:18px;opacity:0;transform:translateY(18px) scale(.985);transition:.28s ease;pointer-events:none;
+    clip-path:polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  }
+  .panel::before{
+    content:"";position:absolute;inset:-1px;pointer-events:none;border-radius:16px;
+    background:conic-gradient(from 0deg at 50% 50%, #00b9ff, #8bffbf, #ff90ff, #00b9ff);
+    filter:blur(10px) saturate(120%);opacity:.12;transition:.2s ease;clip-path:inherit;
+  }
+  .panel.visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+  .panel h1{margin:.2rem 0 .6rem;font-size:28px;letter-spacing:.5px}
+  .panel h2{margin:.2rem 0 .4rem;font-size:20px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .col{flex:1 1 240px;min-width:200px}
+
+  /* Neon buttons */
+  .btn{
+    appearance:none;border:1px solid #2a3a69;background:linear-gradient(180deg,#1a2350,#121944);
+    color:var(--text);padding:12px 14px;border-radius:12px;cursor:pointer;font-weight:700;
+    letter-spacing:.3px;display:inline-flex;gap:8px;align-items:center;justify-content:center;
+    box-shadow:inset 0 0 0 1px #22306a, 0 8px 22px #000a;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn.big{width:100%;font-size:16px;padding:14px}
+  .btn.red{border-color:#763242;background:linear-gradient(#4e1724,#2a0d17)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  label{display:block;margin:.4rem 0 .2rem;color:var(--muted)}
+  input[type="range"]{width:100%}
+  select,input[type="text"]{width:100%;padding:10px;border-radius:10px;background:#0b1330;border:1px solid #28346d;color:var(--text)}
+  .kv{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px dashed #2b355b;border-radius:10px}
+  .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0c1230;padding:4px 8px;border-radius:8px;border:1px solid #2b355b}
+  .muted{color:var(--muted)}
+  .note{font-size:13px;color:#b8c5ff}
+  .center{display:flex;gap:10px;align-items:center;justify-content:center}
+  .split{display:flex;gap:14px;flex-wrap:wrap}
+  .split > *{flex:1 1 260px}
+  .hr{height:1px;background:#263269;margin:10px 0}
+  .badge{display:inline-block;padding:2px 8px;border:1px solid #2b355b;border-radius:999px;font-size:12px;color:#c7d3ff}
+  .list{list-style:none;margin:0;padding:0}
+  .list li{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px dashed #2b355b}
+  .right{margin-left:auto}
+
+  /* Overlays */
+  #pauseOverlay,#gameOverOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .overlay-card{pointer-events:auto;max-width:min(560px,92vw);padding:18px;background:var(--panel-strong);border:1px solid #29315c;border-radius:14px;box-shadow:0 20px 80px #000c}
+  .overlay-card h2{margin:.2rem 0 .6rem}
+  .overlay-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
+
+  /* Boot tooltip */
+  #boot{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  #boot .overlay-card{text-align:center}
+
+  /* Mobile helper: small footer buttons (optional) */
+  #mobile{position:absolute;inset:auto 0 10px 0;display:none;justify-content:center;gap:10px;padding:6px}
+  .thumb{touch-action:none;border:1px solid #2b355b;background:#0e1433aa;color:#cde7ff;border-radius:12px;padding:12px 14px;min-width:84px;text-align:center;user-select:none}
+  .thumb:active{filter:brightness(1.15)}
+  @media (hover:none),(pointer:coarse){
+    #mobile{display:flex}
+    .panel{max-width:92vw}
+  }
+
+  /* Tiny HUD toasts */
+  #tinyToasts{position:absolute;left:50%;top:64px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+  .toast{padding:6px 10px;border-radius:999px;background:#0f1b44cc;border:1px solid #2b355b;color:#dce5ff;font-size:13px;opacity:0;transform:translateY(-6px);transition:opacity .3s, transform .3s}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game" tabindex="0" aria-label="Asteroid Bastion game canvas"></canvas>
+
+  <!-- UI LAYER -->
+  <div id="ui" aria-live="polite">
+
+    <!-- Boot (unlock audio) -->
+    <div id="boot">
+      <div class="overlay-card">
+        <h2>Asteroid Bastion — Missile Defense</h2>
+        <p class="muted">Click / Tap to initialize audio &amp; continue.</p>
+        <div class="center" style="margin-top:8px">
+          <button class="btn big" id="bootBtn">Start</button>
+        </div>
+        <p class="note" style="margin-top:10px">
+          Click anywhere above the ground to fire an interceptor. It <strong>detonates exactly</strong> at the clicked point.
+          Protect the cities on the asteroid. Pause: <span class="kbd">Esc</span> · Fullscreen: <span class="kbd">F</span>.
+        </p>
+      </div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="menu" class="panel">
+      <h1>Asteroid Bastion <span class="badge">v2.0.0</span></h1>
+      <div class="split">
+        <div>
+          <button class="btn big" id="newGameBtn">▶ New Game</button>
+          <div style="height:8px"></div>
+          <button class="btn big" id="continueBtn" title="Load your last save">⏸ Continue</button>
+          <div style="height:8px"></div>
+          <button class="btn big" id="howBtn">❓ How to Play</button>
+          <div style="height:8px"></div>
+          <button class="btn big" id="optionsBtn">⚙ Options</button>
+          <div style="height:8px"></div>
+          <button class="btn big" id="leaderBtn">🏆 Leaderboard</button>
+          <div style="height:8px"></div>
+          <button class="btn" id="creditsBtn">© Credits</button>
+        </div>
+        <div class="col">
+          <h2>Status</h2>
+          <div class="kv"><span>Saved Game</span><span id="saveStatus" class="badge">None</span></div>
+          <div class="kv"><span>High Score</span><span id="hiStatus" class="badge">0</span></div>
+          <div class="hr"></div>
+          <p class="note">Tip: you can lead targets; if your blast radius misses, they keep coming.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div id="options" class="panel">
+      <h1>Options</h1>
+      <div class="grid">
+        <div>
+          <h2>Audio</h2>
+          <label>SFX Volume <span id="sfxVolLbl" class="right"></span></label>
+          <input id="sfxVol" type="range" min="0" max="100" value="70">
+          <label>Music Volume <span id="musVolLbl" class="right"></span></label>
+          <input id="musVol" type="range" min="0" max="100" value="40">
+          <div class="kv" style="margin-top:8px">
+            <span>Mute All</span>
+            <label class="right"><input type="checkbox" id="muteAll"> <span class="note">toggle</span></label>
+          </div>
+        </div>
+        <div>
+          <h2>Graphics</h2>
+          <div class="kv"><span>Particles</span><label class="right"><input type="checkbox" id="optParticles" checked></label></div>
+          <div class="kv"><span>Screen Shake</span><label class="right"><input type="checkbox" id="optShake" checked></label></div>
+          <div class="kv"><span>Star Density</span><span class="right"><select id="optStars"><option value="low">Low</option><option value="med" selected>Medium</option><option value="high">High</option></select></span></div>
+          <div class="kv"><span>Reduce Motion</span><label class="right"><input type="checkbox" id="optReduce"></label></div>
+        </div>
+        <div>
+          <h2>Gameplay</h2>
+          <div class="kv"><span>Difficulty</span>
+            <span class="right">
+              <select id="optDifficulty">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+                <option value="insane">Insane</option>
+              </select>
+            </span>
+          </div>
+          <div class="kv"><span>Blast Radius</span>
+            <span class="right">
+              <select id="optBlast">
+                <option value="24">Small</option>
+                <option value="30" selected>Medium</option>
+                <option value="36">Large</option>
+              </select>
+            </span>
+          </div>
+          <div class="kv"><span>Interceptor Speed</span>
+            <span class="right">
+              <select id="optSpeed">
+                <option value="220">220</option>
+                <option value="260" selected>260</option>
+                <option value="300">300</option>
+              </select>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div class="center">
+        <button class="btn" id="optBack">← Back</button>
+        <button class="btn" id="optDefaults">Reset to Defaults</button>
+        <button class="btn" id="optSave">Save Options</button>
+      </div>
+    </div>
+
+    <!-- How to Play -->
+    <div id="how" class="panel">
+      <h1>How to Play</h1>
+      <div class="grid">
+        <div>
+          <h2>Objective</h2>
+          <p>Defend your asteroid cities. Meteors and enemy warheads descend from orbit. Click where you want your interceptor to <b>detonate</b>. The blast radius destroys anything inside. Miss the radius and threats keep falling.</p>
+          <h2>Waves</h2>
+          <p>Each wave grows tougher: faster warheads, more meteors, and <b>MIRVs</b> that split mid‑flight. Bonus points for surviving cities.</p>
+        </div>
+        <div>
+          <h2>Controls</h2>
+          <ul class="list">
+            <li><span>Fire</span><span class="kbd">Click / Tap</span></li>
+            <li><span>Pause</span><span class="kbd">Esc</span></li>
+            <li><span>Fullscreen</span><span class="kbd">F</span></li>
+            <li><span>Mute</span><span class="kbd">M</span></li>
+          </ul>
+          <p class="note">You can’t detonate early—missiles blow up exactly where you clicked.</p>
+        </div>
+      </div>
+      <div class="hr"></div>
+      <div class="center"><button id="howBack" class="btn">← Back</button></div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div id="leader" class="panel">
+      <h1>Local Leaderboard</h1>
+      <ul class="list" id="leaderList"></ul>
+      <div class="hr"></div>
+      <div class="center">
+        <button class="btn" id="leaderBack">← Back</button>
+        <button class="btn red" id="leaderClear">Clear Scores</button>
+      </div>
+    </div>
+
+    <!-- Credits -->
+    <div id="credits" class="panel">
+      <h1>Credits</h1>
+      <p>Design &amp; Code: <span class="badge">You + GPT‑5 Pro</span></p>
+      <p class="note">Homage to the classic <b>Missile Command</b>. Built with HTML5 Canvas &amp; Web Audio.</p>
+      <div class="center"><button class="btn" id="creditsBack">← Back</button></div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pauseOverlay" hidden>
+      <div class="overlay-card">
+        <h2>Game Paused</h2>
+        <p class="note">Press Esc to resume, or choose an option below.</p>
+        <div class="overlay-actions">
+          <button class="btn" id="resumeBtn">Resume</button>
+          <button class="btn" id="restartBtn">Restart</button>
+          <button class="btn" id="toMenuBtn">Main Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="gameOverOverlay" hidden>
+      <div class="overlay-card">
+        <h2>Mission Failed</h2>
+        <div class="row">
+          <div class="col">
+            <div class="kv"><span>Score</span><strong id="finalScore">0</strong></div>
+            <div class="kv"><span>Wave</span><strong id="finalWave">1</strong></div>
+            <div class="kv"><span>Cities Saved</span><strong id="finalCities">0</strong></div>
+          </div>
+          <div class="col">
+            <label>Your Name</label>
+            <input type="text" id="playerName" maxlength="16" placeholder="Defender">
+          </div>
+        </div>
+        <div class="overlay-actions">
+          <button class="btn" id="saveScoreBtn">Save Score</button>
+          <button class="btn" id="gameOverMenuBtn">Main Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tiny toasts -->
+    <div id="tinyToasts"></div>
+
+    <!-- Mobile helper -->
+    <div id="mobile" aria-hidden="true">
+      <div class="thumb" id="shootBtn">FIRE</div>
+      <div class="thumb" id="pauseBtn">PAUSE</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/** Asteroid Bastion — Missile Defense (v2.0.0)
+ *  Click to launch an interceptor that detonates EXACTLY at the clicked point.
+ *  If the blast radius doesn't reach a threat, it keeps falling toward your cities.
+ */
+
+/* ==============================
+   Helpers & Storage
+   ============================== */
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rand=(min,max)=>Math.random()*(max-min)+min;
+const randi=(min,max)=>Math.floor(rand(min,max+1));
+const PI=Math.PI;
+
+const Store={
+  get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f;}catch(e){return f;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
+  del(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+
+/* ==============================
+   Config & Defaults
+   ============================== */
+const DEFAULT_OPTIONS={
+  audio:{sfx:0.7,music:0.4,mute:false},
+  gfx:{particles:true,shake:true,stars:'med',reduce:false},
+  gameplay:{difficulty:'normal',blast:30,speed:260}
+};
+const DIFFICULTY={
+  easy:{spawn:0.85, speed:0.9, splitChance:0.06, wavesize:10, cities:6},
+  normal:{spawn:1.0, speed:1.0, splitChance:0.12, wavesize:12, cities:6},
+  hard:{spawn:1.15, speed:1.1, splitChance:0.18, wavesize:14, cities:5},
+  insane:{spawn:1.3, speed:1.2, splitChance:0.25, wavesize:16, cities:4},
+};
+
+/* ==============================
+   Canvas & Background
+   ============================== */
+const BASE_W=480, BASE_H=270;
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d',{desynchronized:true}); // transparent
+let DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+function resizeCanvas(){
+  DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  const scale=Math.min(window.innerWidth/BASE_W, window.innerHeight/BASE_H);
+  canvas.style.width=(BASE_W*scale)+'px';
+  canvas.style.height=(BASE_H*scale)+'px';
+  canvas.width=Math.floor(BASE_W*DPR);
+  canvas.height=Math.floor(BASE_H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',resizeCanvas);
+function paintBootBG(){
+  const g=ctx, grd=g.createLinearGradient(0,0,0,BASE_H);
+  grd.addColorStop(0,'#0b133a'); grd.addColorStop(1,'#081028');
+  g.fillStyle=grd; g.fillRect(0,0,BASE_W,BASE_H);
+}
+
+/* Starfield */
+class Stars{
+  constructor(d='med'){this.layers=[];this.setDensity(d);}
+  setDensity(d){const base={low:50,med:100,high:160}[d]||100;
+    this.layers=[this.mk(base,8,'#bcd1ff'),this.mk(Math.floor(base*.6),16,'#8aa3ff'),this.mk(Math.floor(base*.4),28,'#5570ff')];}
+  mk(n,spd,col){const a=[];for(let i=0;i<n;i++)a.push({x:Math.random()*BASE_W,y:Math.random()*BASE_H,s:Math.random()*1.6+.3,v:spd*(.7+Math.random()*.6),c:col});return a;}
+  update(dt){for(const L of this.layers)for(const s of L){s.y+=s.v*dt;if(s.y>BASE_H)s.y-=BASE_H;}}
+  draw(g){for(const L of this.layers){g.save();for(const s of L){g.fillStyle=s.c;g.globalAlpha=clamp(s.s/2.2,.3,.9);g.fillRect(s.x,s.y,s.s,s.s);}g.restore();}}
+}
+
+/* ==============================
+   Audio (simple synth)
+   ============================== */
+class AudioMgr{
+  constructor(){this.ctx=null;this.master=null;this.music=null;this.sfxVol=.7;this.musicVol=.4;this.mute=false;}
+  init(){if(this.ctx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    this.ctx=new AC();this.master=this.ctx.createGain();this.master.connect(this.ctx.destination);
+    this.music=this.ctx.createGain();this.music.connect(this.master);this.music.gain.value=0;
+    const o=this.ctx.createOscillator(), lfo=this.ctx.createOscillator(), mod=this.ctx.createGain();
+    lfo.frequency.value=.06; mod.gain.value=10; lfo.connect(mod); mod.connect(o.frequency); o.type='sine'; o.frequency.value=180;
+    const f=this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=700; o.connect(f); f.connect(this.music); o.start(); lfo.start();}
+  setVolumes(sfx,mus){this.sfxVol=sfx;this.musicVol=mus;if(this.music)this.music.gain.value=(this.mute?0:mus*0.28);}
+  setMute(m){this.mute=!!m;if(this.music)this.music.gain.value=(this.mute?0:this.musicVol*0.28);}
+  resume(){if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();}
+  /* one-shot beep helper */
+  beep(freq=440,dur=.1,type='square',glideTo=null,color=0){
+    if(!this.ctx||this.mute||this.sfxVol<=0)return; const t=this.ctx.currentTime;
+    const o=this.ctx.createOscillator(); o.type=type; o.frequency.value=freq;
+    const g=this.ctx.createGain(); g.gain.value=0; const f=this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=12000-color*8000;
+    o.connect(f); f.connect(g); g.connect(this.master);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(this.sfxVol,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    if(glideTo){o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(glideTo,t+dur);}
+    o.start(t); o.stop(t+dur+.02);
+  }
+  launch(){this.beep(560,.08,'square',820,0);}
+  boom(){this.beep(140,.35,'sawtooth',80,2);}
+  hit(){this.beep(320,.08,'triangle',240,1);}
+}
+const Audio=new AudioMgr();
+
+/* ==============================
+   Entities
+   ============================== */
+class Entity{constructor(x,y,r){this.x=x;this.y=y;this.r=r;this.vx=0;this.vy=0;this.alive=true;}update(dt,game){}draw(g){}}
+const dist2=(a,b)=>{const dx=a.x-b.x,dy=a.y-b.y;return dx*dx+dy*dy;};
+
+/* Interceptor missile (travels to click, then explodes exactly there) */
+class Interceptor extends Entity{
+  constructor(x,y,tx,ty,speed,blast){
+    super(x,y,2); this.tx=tx; this.ty=ty; this.speed=speed; this.blast=blast; this.arrived=false;
+    const dx=tx-x,dy=ty-y; const d=Math.hypot(dx,dy)||1; this.vx=dx/d*speed; this.vy=dy/d*speed;
+  }
+  update(dt,game){
+    if(this.arrived){this.alive=false; game.explosions.push(new Explosion(this.tx,this.ty,this.blast)); return;}
+    const nx=this.x+this.vx*dt, ny=this.y+this.vy*dt;
+    // arrival check: if we'd overshoot the target this frame, snap to it and detonate there
+    const prevd=Math.hypot(this.tx-this.x,this.ty-this.y), newd=Math.hypot(this.tx-nx,this.ty-ny);
+    if(newd>prevd){ this.x=this.tx; this.y=this.ty; this.arrived=true; return; }
+    this.x=nx; this.y=ny;
+  }
+  draw(g){g.save(); g.shadowColor='#aef2ff'; g.shadowBlur=6; g.fillStyle='#d8fbff'; g.beginPath(); g.arc(this.x,this.y,2,0,PI*2); g.fill(); g.restore();}
+}
+
+/* Explosion grows then fades; kills threats inside radius */
+class Explosion extends Entity{
+  constructor(x,y,maxR){super(x,y,maxR); this.t=0; this.life=.65; this.maxR=maxR;}
+  update(dt){this.t+=dt; if(this.t>this.life)this.alive=false;}
+  radius(){ const t=this.t/this.life; return (t<.35) ? lerp(0,this.maxR,t/.35) : lerp(this.maxR,this.maxR*0.6,(t-.35)/.65); }
+  draw(g){const r=this.radius(); g.save(); g.globalAlpha=.22; g.fillStyle='#c9f7ff'; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.fill(); g.globalAlpha=1; g.strokeStyle='#9fe6ff'; g.lineWidth=1; g.beginPath(); g.arc(this.x,this.y,r,0,PI*2); g.stroke(); g.restore();}
+}
+
+/* Incoming threat: meteor/warhead and MIRV */
+class Threat extends Entity{
+  constructor(x,y,tx,ty,speed,type='warhead'){
+    super(x,y,2.5); this.tx=tx; this.ty=ty; this.type=type; this.speed=speed*(type==='meteor'?0.9:1); this.split=false; this.value=(type==='meteor'?60:100);
+    const dx=tx-x,dy=ty-y; const d=Math.hypot(dx,dy)||1; this.vx=dx/d*this.speed; this.vy=dy/d*this.speed;
+    this.trail=0; // particle timer
+  }
+  update(dt,game){
+    this.x+=this.vx*dt; this.y+=this.vy*dt;
+    if(game.opts.gfx.particles){ this.trail-=dt; if(this.trail<=0){ this.trail=.03; game.parts.push(new Particle(this.x,this.y,rand(-8,8),rand(-8,8),.25,'#ffcfcc')); } }
+    // Splitter logic (MIRV)
+    if(!this.split && this.type==='warhead' && game.wave>2 && Math.random()<0.002*game.diff.spawn){
+      if(Math.random()<game.diff.splitChance && this.y>50 && this.y<BASE_H*0.55){
+        this.split=true;
+        const children=randi(2,3);
+        for(let i=0;i<children;i++){
+          const cty=game.groundY-4, ctx=(game.randomCityX());
+          game.threats.push(new Threat(this.x,this.y,ctx,cty,this.speed*1.05,'warhead'));
+        }
+      }
+    }
+    // Reached ground?
+    if(this.y >= game.groundY-2){
+      this.alive=false;
+      game.onImpact(this.x);
+    }
+  }
+  draw(g){g.save(); g.shadowColor=this.type==='meteor'?'#ff9b7b':'#ffd1d1'; g.shadowBlur=6; g.fillStyle=this.type==='meteor'?'#ffd1b3':'#ffe3e3'; g.beginPath(); g.arc(this.x,this.y,this.r,0,PI*2); g.fill(); g.restore();}
+}
+
+/* Fluff particle */
+class Particle extends Entity{
+  constructor(x,y,vx,vy,life,color){super(x,y,1.5); this.vx=vx; this.vy=vy; this.life=life; this.t=life; this.color=color;}
+  update(dt){this.x+=this.vx*dt; this.y+=this.vy*dt; this.vx*=.98; this.vy*=.98; this.t-=dt; if(this.t<=0)this.alive=false;}
+  draw(g){const a=clamp(this.t/this.life,0,1); g.save(); g.globalAlpha=a; g.fillStyle=this.color; g.fillRect(this.x,this.y,2,2); g.restore();}
+}
+
+/* ==============================
+   Game
+   ============================== */
+class Game{
+  constructor(options){
+    this.opts=options; this.stars=new Stars(this.opts.gfx.stars);
+    this.interceptors=[]; this.explosions=[]; this.threats=[]; this.parts=[];
+    this.wave=1; this.score=0;
+    this.diff=DIFFICULTY[this.opts.gameplay.difficulty]||DIFFICULTY.normal;
+    this.groundY=BASE_H-24;
+    this.cities=[]; this.resetCities();
+    this.launchCD=0; // fire rate limiting
+    this.running=false; this.paused=false; this.last=performance.now(); this.accum=0;
+    this.saved=null;
+    // mouse tracking for reticle
+    this.cursor={x:BASE_W/2,y:BASE_H/3};
+  }
+  resetCities(){
+    this.cities=[];
+    const count=this.diff.cities;
+    const margin=40, span=BASE_W-margin*2, step=span/(count-1);
+    for(let i=0;i<count;i++){
+      const x=margin+i*step, y=this.groundY-2;
+      this.cities.push({x,y,alive:true});
+    }
+  }
+  randomCityX(){
+    const alive=this.cities.filter(c=>c.alive);
+    if (!alive.length) return BASE_W/2;
+    return alive[randi(0,alive.length-1)].x;
+  }
+  start(newGame=true){
+    if(newGame){
+      this.interceptors.length=0; this.explosions.length=0; this.threats.length=0; this.parts.length=0;
+      this.wave=1; this.score=0; this.resetCities();
+    }else if(this.saved){ Object.assign(this,this.saved); this.stars.setDensity(this.opts.gfx.stars); }
+    this.running=true; this.paused=false; this.last=performance.now(); this.accum=0;
+    this.spawnWave(this.wave);
+  }
+  saveSnapshot(){
+    const snap={opts:this.opts, wave:this.wave, score:this.score, cities:this.cities};
+    Store.set('ab_save',snap);
+  }
+  hasSave(){ return !!Store.get('ab_save',null); }
+  loadSave(){ this.saved=Store.get('ab_save',null); }
+  clearSave(){ Store.del('ab_save'); }
+
+  spawnWave(n){
+    const base= this.diff.wavesize + Math.floor((n-1)*2);
+    const total=base;
+    const speedBase = (85 + n*5) * this.diff.speed;
+    for(let i=0;i<total;i++){
+      const delay = i * (0.75/this.diff.spawn);
+      setTimeout(()=>{ if(!this.running) return; this.spawnThreat(speedBase); }, delay*1000);
+    }
+  }
+  spawnThreat(speedBase){
+    const sx=rand(20,BASE_W-20), sy=-10;
+    const tx=this.randomCityX(), ty=this.groundY-2;
+    const type = Math.random()<0.35 ? 'meteor' : 'warhead';
+    const t=new Threat(sx,sy,tx,ty,rand(speedBase*0.9,speedBase*1.1),type);
+    this.threats.push(t);
+  }
+  fireAt(x,y){
+    if (!this.running || this.paused) return;
+    if (y >= this.groundY-10) return; // prevent waste detonations underground
+    if (this.launchCD>0) return;
+    const speed=this.opts.gameplay.speed;
+    const blast=this.opts.gameplay.blast;
+    const turretX=BASE_W/2, turretY=this.groundY-4;
+    this.interceptors.push(new Interceptor(turretX,turretY,x,y,speed,blast));
+    this.launchCD=0.18;
+    Audio.launch();
+  }
+  onImpact(x){
+    // Damage nearest city in radius 26, otherwise cosmetic crater
+    const radius=26;
+    let hit=false;
+    for(const c of this.cities){
+      if (!c.alive) continue;
+      if (Math.abs(c.x - x) < radius){
+        c.alive=false; hit=true;
+        this.spawnExplosion(c.x,this.groundY-6,'#ffd0a0');
+        if(this.opts.gfx.shake) this.shake(8,.45);
+        Audio.hit();
+      }
+    }
+    // General ground puff
+    this.spawnExplosion(x,this.groundY-4,'#ffd0a0');
+    if(!hit && this.opts.gfx.shake) this.shake(5,.25);
+    // Lose when all cities gone
+    if (!this.cities.some(c=>c.alive)) this.endGame();
+  }
+  spawnExplosion(x,y,color='#ffd8a0'){
+    if(this.opts.gfx.particles){
+      for(let i=0;i<18;i++){
+        const a=rand(0,PI*2), s=rand(40,120);
+        this.parts.push(new Particle(x,y,Math.cos(a)*s,Math.sin(a)*s,rand(.3,.6),color));
+      }
+    }
+  }
+  update(dt){
+    this.stars.update(dt*(this.opts.gfx.reduce?0.5:1));
+    if (!this.running || this.paused) return;
+    this.launchCD=Math.max(0,this.launchCD-dt);
+
+    // entities
+    for(const a of [this.interceptors,this.explosions,this.threats,this.parts]) for(const o of a) if (o.alive) o.update(dt,this);
+
+    // collisions: explosion vs threat
+    for(const ex of this.explosions){
+      if (!ex.alive) continue;
+      const r=ex.radius(); const r2=r*r;
+      for(const t of this.threats){
+        if (!t.alive) continue;
+        if ( (t.x-ex.x)*(t.x-ex.x) + (t.y-ex.y)*(t.y-ex.y) <= r2 ){
+          t.alive=false; this.score += t.value; this.spawnExplosion(t.x,t.y);
+          Audio.boom();
+        }
+      }
+    }
+
+    // cleanup
+    this.interceptors=this.interceptors.filter(o=>o.alive);
+    this.explosions=this.explosions.filter(o=>o.alive);
+    this.threats=this.threats.filter(o=>o.alive);
+    this.parts=this.parts.filter(o=>o.alive);
+
+    // wave progression: when no threats left and no interceptors/explosions, start next wave
+    if(this.threats.length===0 && this.interceptors.length===0 && this.explosions.length===0 && this.cities.some(c=>c.alive)){
+      // bonus for surviving cities
+      const aliveCount=this.cities.filter(c=>c.alive).length;
+      this.score += aliveCount*50;
+      toast(`Wave ${this.wave} cleared! +${aliveCount*50} bonus`);
+      this.wave+=1;
+      this.spawnWave(this.wave);
+    }
+  }
+  draw(g){
+    // background
+    g.save();
+    const bg=g.createLinearGradient(0,0,0,BASE_H); bg.addColorStop(0,'#0b133a'); bg.addColorStop(1,'#081028'); g.fillStyle=bg; g.fillRect(0,0,BASE_W,BASE_H);
+    this.stars.draw(g);
+
+    // asteroid ground
+    g.save();
+    g.translate(BASE_W/2,this.groundY+28);
+    g.fillStyle='#0b162f'; g.beginPath(); g.ellipse(0,0,BASE_W*0.6,42,0,0,PI); g.fill();
+    // crust line
+    g.strokeStyle='#24356c'; g.lineWidth=2; g.beginPath(); g.ellipse(0,-2,BASE_W*0.6,40,0,0,PI); g.stroke();
+    g.restore();
+
+    // cities (domes)
+    for(const c of this.cities){
+      g.save(); g.translate(c.x,this.groundY-1);
+      if (c.alive){
+        g.fillStyle='#a8e7ff'; g.globalAlpha=.2; g.beginPath(); g.arc(0,0,9,PI,0); g.lineTo(0,0); g.closePath(); g.fill();
+        g.globalAlpha=1; g.fillStyle='#cfe9ff'; g.fillRect(-7,0,14,2);
+      }else{
+        g.fillStyle='#364066'; g.fillRect(-8,0,16,2);
+      }
+      g.restore();
+    }
+
+    // turret (center launcher)
+    g.save();
+    g.translate(BASE_W/2,this.groundY-4);
+    g.fillStyle='#98b7ff'; g.fillRect(-6,0,12,4);
+    // barrel aim reticle
+    const ang=Math.atan2(this.cursor.y-(this.groundY-4), this.cursor.x-BASE_W/2);
+    g.rotate(ang); g.fillStyle='#c7ddff'; g.fillRect(2,-1,12,2);
+    g.restore();
+
+    // entities
+    for(const p of this.parts) p.draw(g);
+    for(const t of this.threats) t.draw(g);
+    for(const m of this.interceptors) m.draw(g);
+    for(const e of this.explosions) e.draw(g);
+
+    // HUD
+    g.fillStyle='#d6e5ff'; g.font='bold 12px system-ui, sans-serif'; g.textAlign='left'; g.textBaseline='top';
+    g.fillText(`Score: ${this.score}`,6,6);
+    g.fillText(`Wave: ${this.wave}`,6,22);
+    const alive=this.cities.filter(c=>c.alive).length;
+    g.fillText(`Cities: ${alive}/${this.cities.length}`,6,38);
+
+    // crosshair at cursor
+    const cx=this.cursor.x, cy=this.cursor.y;
+    g.strokeStyle='#6fe1ff'; g.lineWidth=1; g.beginPath();
+    g.moveTo(cx-6,cy); g.lineTo(cx-2,cy);
+    g.moveTo(cx+6,cy); g.lineTo(cx+2,cy);
+    g.moveTo(cx,cy-6); g.lineTo(cx,cy-2);
+    g.moveTo(cx,cy+6); g.lineTo(cx,cy+2);
+    g.stroke();
+
+    if (this.paused){
+      g.textAlign='center'; g.fillStyle='#b8c5ff'; g.fillText('PAUSED', BASE_W/2, BASE_H/2 - 40);
+    }
+
+    g.restore();
+  }
+  shakeAmp=0; shakeTime=0;
+  shake(a,d){ this.shakeAmp=Math.max(this.shakeAmp,a); this.shakeTime=Math.max(this.shakeTime,d); }
+  applyShake(g){ if (this.shakeTime>0){ this.shakeTime-=1/60; g.translate(rand(-this.shakeAmp,this.shakeAmp), rand(-this.shakeAmp,this.shakeAmp)); } }
+  togglePause(showOverlay=false){ this.paused=!this.paused; document.getElementById('pauseOverlay').hidden = !this.paused || !showOverlay; }
+  endGame(){
+    this.running=false; this.paused=false;
+    document.getElementById('finalScore').textContent=this.score.toString();
+    document.getElementById('finalWave').textContent=Math.max(this.wave,1).toString();
+    document.getElementById('finalCities').textContent=this.cities.filter(c=>c.alive).length.toString();
+    document.getElementById('gameOverOverlay').hidden=false;
+    this.clearSave();
+  }
+}
+
+/* ==============================
+   Loop (fixed timestep)
+   ============================== */
+const gameState={game:null}; let rafId=0;
+function gameLoop(ts){
+  const g=gameState.game; if(!g){ rafId=requestAnimationFrame(gameLoop); return; }
+  let dt=(ts-g.last)/1000; if(dt>0.1) dt=0.1; g.last=ts; const step=1/60; g.accum+=dt;
+  while(g.accum>=step){ g.update(step); g.accum-=step; }
+  ctx.save();
+  ctx.clearRect(0,0,BASE_W,BASE_H);
+  if (g.shakeTime>0){ g.applyShake(ctx); }
+  g.draw(ctx);
+  ctx.restore();
+  rafId=requestAnimationFrame(gameLoop);
+}
+
+/* ==============================
+   UI & Controls
+   ============================== */
+const $=sel=>document.querySelector(sel);
+const panels={menu:$('#menu'),options:$('#options'),how:$('#how'),leader:$('#leader'),credits:$('#credits')};
+function showPanel(name){ for(const [k,el] of Object.entries(panels)){ if(!el)continue; if(k===name) el.classList.add('visible'); else el.classList.remove('visible'); } }
+function hideAllPanels(){ for(const el of Object.values(panels)) el.classList.remove('visible'); }
+
+function refreshMenuStatus(){
+  const save=Store.get('ab_save',null);
+  $('#saveStatus').textContent=save?'Available':'None';
+  $('#continueBtn').disabled=!save;
+  const hi=Store.get('ab_scores',[]).sort((a,b)=>b.score-a.score)[0]?.score||0;
+  $('#hiStatus').textContent=hi.toString();
+}
+function populateLeaderboard(){
+  const list=$('#leaderList'); list.innerHTML='';
+  const scores=Store.get('ab_scores',[]).sort((a,b)=>b.score-a.score).slice(0,10);
+  if(!scores.length){ const li=document.createElement('li'); li.innerHTML='<span>No scores yet</span><span class="badge">Play a game!</span>'; list.appendChild(li); return; }
+  scores.forEach((s,i)=>{ const li=document.createElement('li'); li.innerHTML=`<span>#${i+1} ${s.name||'Defender'}</span><span>${s.score}</span>`; list.appendChild(li); });
+}
+
+function toast(msg){
+  const wrap=document.getElementById('tinyToasts');
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  wrap.appendChild(el); requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(),250); }, 1600);
+}
+
+/* Options UI binding */
+function applyOptionsToUI(opt){
+  $('#sfxVol').value=Math.round(opt.audio.sfx*100);
+  $('#musVol').value=Math.round(opt.audio.music*100);
+  $('#sfxVolLbl').textContent=Math.round(opt.audio.sfx*100)+'%';
+  $('#musVolLbl').textContent=Math.round(opt.audio.music*100)+'%';
+  $('#muteAll').checked=!!opt.audio.mute;
+
+  $('#optParticles').checked=!!opt.gfx.particles;
+  $('#optShake').checked=!!opt.gfx.shake;
+  $('#optStars').value=opt.gfx.stars;
+  $('#optReduce').checked=!!opt.gfx.reduce;
+
+  $('#optDifficulty').value=opt.gameplay.difficulty;
+  $('#optBlast').value=opt.gameplay.blast;
+  $('#optSpeed').value=opt.gameplay.speed;
+}
+function readOptionsFromUI(){
+  const g=gameState.game, opt=g.opts;
+  opt.audio.sfx=+$('#sfxVol').value/100; opt.audio.music=+$('#musVol').value/100; opt.audio.mute=$('#muteAll').checked;
+  opt.gfx.particles=$('#optParticles').checked; opt.gfx.shake=$('#optShake').checked; opt.gfx.stars=$('#optStars').value; opt.gfx.reduce=$('#optReduce').checked;
+  opt.gameplay.difficulty=$('#optDifficulty').value; opt.gameplay.blast=+$('#optBlast').value; opt.gameplay.speed=+$('#optSpeed').value;
+
+  Store.set('ab_options',opt); Audio.setVolumes(opt.audio.sfx,opt.audio.music); Audio.setMute(opt.audio.mute);
+  g.stars.setDensity(opt.gfx.stars);
+  g.diff=DIFFICULTY[opt.gameplay.difficulty]||DIFFICULTY.normal;
+  toast('Options saved');
+}
+$('#sfxVol').addEventListener('input', e=>$('#sfxVolLbl').textContent=e.target.value+'%');
+$('#musVol').addEventListener('input', e=>$('#musVolLbl').textContent=e.target.value+'%');
+
+/* Buttons */
+$('#newGameBtn').addEventListener('click', startNewGame);
+$('#continueBtn').addEventListener('click', continueGame);
+$('#howBtn').addEventListener('click', ()=>showPanel('how'));
+$('#howBack').addEventListener('click', ()=>showPanel('menu'));
+$('#optionsBtn').addEventListener('click', ()=>showPanel('options'));
+$('#optBack').addEventListener('click', ()=>{ applyOptionsToUI(gameState.game.opts); showPanel('menu'); });
+$('#optSave').addEventListener('click', ()=>{ readOptionsFromUI(); });
+$('#optDefaults').addEventListener('click', ()=>{
+  const g=gameState.game; g.opts=JSON.parse(JSON.stringify(DEFAULT_OPTIONS)); applyOptionsToUI(g.opts);
+});
+$('#leaderBtn').addEventListener('click', ()=>{ populateLeaderboard(); showPanel('leader'); });
+$('#leaderBack').addEventListener('click', ()=>showPanel('menu'));
+$('#leaderClear').addEventListener('click', ()=>{ Store.del('ab_scores'); populateLeaderboard(); toast('Cleared'); });
+$('#creditsBtn').addEventListener('click', ()=>showPanel('credits'));
+$('#creditsBack').addEventListener('click', ()=>showPanel('menu'));
+
+$('#resumeBtn').addEventListener('click', ()=>{ gameState.game.togglePause(); $('#pauseOverlay').hidden=true; });
+$('#restartBtn').addEventListener('click', ()=>{ $('#pauseOverlay').hidden=true; gameState.game.start(true); });
+$('#toMenuBtn').addEventListener('click', ()=>{
+  $('#pauseOverlay').hidden=true; gameState.game.running=false; showPanel('menu');
+  gameState.game.saveSnapshot(); refreshMenuStatus();
+});
+$('#gameOverMenuBtn').addEventListener('click', ()=>{ $('#gameOverOverlay').hidden=true; showPanel('menu'); refreshMenuStatus(); });
+$('#saveScoreBtn').addEventListener('click', ()=>{
+  const name=($('#playerName').value||'Defender').trim().slice(0,16);
+  const score=gameState.game.score; const arr=Store.get('ab_scores',[]); arr.push({name,score,when:Date.now()});
+  Store.set('ab_scores',arr); $('#gameOverOverlay').hidden=true; populateLeaderboard(); showPanel('leader');
+});
+
+/* Input / firing */
+function eventToCanvas(e){
+  const rect=canvas.getBoundingClientRect();
+  const x=(e.clientX-rect.left)*BASE_W/rect.width;
+  const y=(e.clientY-rect.top)*BASE_H/rect.height;
+  return {x:clamp(x,0,BASE_W), y:clamp(y,0,BASE_H)};
+}
+function handleFire(e){
+  const g=gameState.game; if(!g||!g.running||g.paused) return;
+  const p=eventToCanvas(e); g.cursor=p; g.fireAt(p.x,p.y);
+}
+canvas.addEventListener('pointerdown', handleFire);
+/* Also catch clicks through UI root when no panel is visible */
+document.getElementById('ui').addEventListener('pointerdown', (e)=>{
+  // if a visible panel exists, ignore (so menus still clickable)
+  const anyVisible = Object.values(panels).some(el=>el.classList.contains('visible'));
+  const overlays = !document.getElementById('pauseOverlay').hidden || !document.getElementById('gameOverOverlay').hidden;
+  if (anyVisible || overlays) return;
+  handleFire(e);
+});
+canvas.addEventListener('pointermove', (e)=>{ const g=gameState.game; if(!g) return; g.cursor=eventToCanvas(e); });
+
+/* Mobile helpers */
+document.getElementById('shootBtn').addEventListener('click', ()=>{
+  const g=gameState.game; if(!g||!g.running||g.paused) return;
+  // fire at current cursor (last touch or center)
+  g.fireAt(g.cursor.x,g.cursor.y);
+});
+document.getElementById('pauseBtn').addEventListener('click', ()=>{
+  const g=gameState.game; if(!g||!g.running) return; g.togglePause(true);
+});
+
+/* Shortcuts */
+window.addEventListener('keydown', (e)=>{
+  const g=gameState.game; if(!g) return;
+  if (e.code==='Escape' && g.running){ e.preventDefault(); g.togglePause(true); }
+  if (e.code==='KeyF'){ e.preventDefault(); const doc=document, el=document.documentElement; if(!doc.fullscreenElement){ el.requestFullscreen?.().catch(()=>{}); } else { doc.exitFullscreen?.(); } }
+  if (e.code==='KeyM'){ e.preventDefault(); g.opts.audio.mute=!g.opts.audio.mute; Audio.setMute(g.opts.audio.mute); }
+});
+
+/* Game lifecycle */
+function startNewGame(){ hideAllPanels(); $('#pauseOverlay').hidden=true; $('#gameOverOverlay').hidden=true; gameState.game.start(true); }
+function continueGame(){ hideAllPanels(); gameState.game.loadSave(); gameState.game.start(false); }
+
+function initGame(){
+  resizeCanvas();
+  const savedOpt=Store.get('ab_options',DEFAULT_OPTIONS);
+  const options=JSON.parse(JSON.stringify(DEFAULT_OPTIONS));
+  for(const k in savedOpt){ if (typeof savedOpt[k]==='object') Object.assign(options[k],savedOpt[k]); else options[k]=savedOpt[k]; }
+  const game=new Game(options); gameState.game=game;
+  applyOptionsToUI(options); Audio.setVolumes(options.audio.sfx,options.audio.music); Audio.setMute(options.audio.mute);
+  refreshMenuStatus(); showPanel('menu'); if (game.hasSave()) game.loadSave();
+  if(!rafId) rafId=requestAnimationFrame(gameLoop);
+}
+
+/* Boot */
+document.getElementById('bootBtn').addEventListener('click', ()=>{
+  Audio.init(); Audio.resume(); document.getElementById('boot').style.display='none'; initGame();
+});
+window.addEventListener('beforeunload', ()=>{ const g=gameState.game; if(g?.running) g.saveSnapshot(); });
+window.addEventListener('blur', ()=>{ const g=gameState.game; if(g?.running && !g.paused){ g.togglePause(true); g.saveSnapshot(); refreshMenuStatus(); }});
+
+/* Kickoff */
+resizeCanvas();
+paintBootBG();
+/* Safety: keep overlays hidden on load */
+document.getElementById('pauseOverlay').hidden=true;
+document.getElementById('gameOverOverlay').hidden=true;
+/* Focus canvas cursor */
+canvas.addEventListener('pointerdown', ()=> canvas.focus());
+
+})(); // IIFE end
+</script>
+</body>
+</html>
