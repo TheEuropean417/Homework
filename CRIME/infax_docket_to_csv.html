@@ -78,7 +78,8 @@
   </footer>
 
   <script>
-    const CONSOLE_SNIPPET = `(function(){
+  // Pretty, readable script (also used for Option C)
+  const CONSOLE_SNIPPET = `(function(){
   function s(t){return (t||'').replace(/\\s+/g,' ').trim()}
   function visible(el){
     try{
@@ -95,89 +96,126 @@
     }).join(',')).join('\\r\\n');
   }
 
-  const wanted = ['Case Name','Party Name','Case Number','Floor','Courtroom','Hearing Time','Start Time','Case Type','Judge','Room'];
+  // Try to detect the docket table NOW
+  function findTableNow(){
+    const wanted = ['Case Name','Party Name','Case Number','Floor','Courtroom','Hearing Time','Start Time','Case Type','Judge','Room'];
+    const sWanted = wanted.map(w => w.toLowerCase());
 
-  const tables = Array.from(document.querySelectorAll('table')).filter(visible);
-  let table = tables.find(t => {
-    const ht = s((t.tHead && t.tHead.textContent) || (t.querySelector('thead') && t.querySelector('thead').textContent) || (t.rows[0] && t.rows[0].textContent) || '');
-    return wanted.some(k => ht.includes(k));
-  }) || (tables[0] || null);
+    const tables = Array.from(document.querySelectorAll('table')).filter(visible);
+    let table = tables.find(t => {
+      const ht = s((t.tHead && t.tHead.textContent) || (t.querySelector('thead') && t.querySelector('thead').textContent) || (t.rows[0] && t.rows[0].textContent) || '');
+      return sWanted.some(k => ht.toLowerCase().includes(k));
+    }) || (tables[0] || null);
 
-  let headers = [], rows = [];
-  if(table){
-    const ths = table.querySelectorAll('thead th, thead td');
-    if(ths.length){
-      headers = Array.from(ths).map(th => s(th.textContent));
+    let headers = [], rows = [];
+    if(table){
+      const ths = table.querySelectorAll('thead th, thead td');
+      if(ths.length){
+        headers = Array.from(ths).map(th => s(th.textContent));
+      }else{
+        const fr = table.querySelector('tr');
+        if(fr) headers = Array.from(fr.cells).map(c => s(c.textContent));
+      }
+      const bodyRows = table.querySelectorAll('tbody tr');
+      const trs = bodyRows.length ? bodyRows : Array.from(table.querySelectorAll('tr')).slice(headers.length?1:0);
+      rows = Array.from(trs).filter(visible).map(tr => Array.from(tr.cells).map(td => s(td.textContent)));
     }else{
-      const fr = table.querySelector('tr');
-      if(fr) headers = Array.from(fr.cells).map(c => s(c.textContent));
+      // ARIA table/grid fallback
+      const aria = document.querySelector('[role="table"], [role="grid"]');
+      if(!aria) return null; // not ready yet
+      headers = Array.from(aria.querySelectorAll('[role="columnheader"]')).map(c => s(c.textContent));
+      rows = Array.from(aria.querySelectorAll('[role="row"]'))
+        .filter(r => r.querySelector('[role="cell"]'))
+        .map(r => Array.from(r.querySelectorAll('[role="cell"]')).map(c => s(c.textContent)));
     }
-    const bodyRows = table.querySelectorAll('tbody tr');
-    const trs = bodyRows.length ? bodyRows : Array.from(table.querySelectorAll('tr')).slice(headers.length?1:0);
-    rows = Array.from(trs).filter(visible).map(tr => Array.from(tr.cells).map(td => s(td.textContent)));
-  }else{
-    // ARIA table/grid fallback
-    const aria = document.querySelector('[role=\"table\"], [role=\"grid\"]');
-    if(!aria){ alert('Could not find a docket table. Scroll to the list and try again.'); return; }
-    headers = Array.from(aria.querySelectorAll('[role=\"columnheader\"]')).map(c => s(c.textContent));
-    rows = Array.from(aria.querySelectorAll('[role=\"row\"]'))
-      .filter(r => r.querySelector('[role=\"cell\"]'))
-      .map(r => Array.from(r.querySelectorAll('[role=\"cell\"]')).map(c => s(c.textContent)));
+
+    if(rows.length && headers.length && rows[0].join('|')===headers.join('|')) rows.shift();
+    if(!headers.length && rows.length) headers = rows[0].map((_,i) => 'Column '+(i+1));
+
+    // Reduce to common subset if we can map at least a few known columns
+    const hLower = headers.map(h => h.toLowerCase());
+    const wanted = ['Case Name','Party Name','Case Number','Floor','Courtroom','Hearing Time','Start Time','Case Type','Judge','Room'];
+    const idx = wanted.map(n => hLower.indexOf(n.toLowerCase())).filter(i => i>-1);
+
+    let H = headers, R = rows;
+    if(idx.length >= 3){
+      H = idx.map(i => headers[i]);
+      R = rows.map(r => idx.map(i => r[i] || ''));
+    }
+
+    return { H, R };
   }
 
-  // Drop duplicate header row if present
-  if(rows.length && headers.length && rows[0].join('|')===headers.join('|')) rows.shift();
-  if(!headers.length && rows.length) headers = rows[0].map((_,i) => 'Column '+(i+1));
+  // Wait up to maxMs for table to appear (poll + MutationObserver)
+  function waitForData(maxMs=15000){
+    return new Promise((resolve, reject) => {
+      const deadline = Date.now() + maxMs;
 
-  // Keep only a common subset, if we can map at least a few known columns
-  const hLower = headers.map(h => h.toLowerCase());
-  const idx = wanted.map(n => hLower.indexOf(n.toLowerCase())).filter(i => i>-1);
-  let H = headers, R = rows;
-  if(idx.length >= 3){
-    H = idx.map(i => headers[i]);
-    R = rows.map(r => idx.map(i => r[i] || ''));
-  }
+      const tryNow = () => {
+        const res = findTableNow();
+        if(res && res.R && res.R.length){ cleanup(); return resolve(res); }
+        if(Date.now() > deadline){ cleanup(); return reject(new Error('Could not find docket rows on the page.')); }
+      };
 
-  // ---------- FILTERS YOU ASKED FOR ----------
-  // 1) Remove rows whose Column A (first output column) does NOT contain a comma
-  let F = R;
-  if (H.length >= 1) {
-    F = F.filter(r => (r[0] || '').indexOf(',') !== -1);
-  }
+      const mo = new MutationObserver(() => tryNow());
+      mo.observe(document.documentElement || document.body, { subtree: true, childList: true });
 
-  // 2) Remove duplicate rows by Column B (second output column), keeping the first
-  if (H.length >= 2) {
-    const seenB = new Set();
-    F = F.filter(r => {
-      const key = (r[1] || '').replace(/\\s+/g,' ').trim().toLowerCase();
-      if (seenB.has(key)) return false;
-      seenB.add(key);
-      return true;
+      const timer = setInterval(tryNow, 400);
+      const cleanup = () => { try{ mo.disconnect(); }catch(_){} clearInterval(timer); };
+
+      // kick once now
+      tryNow();
     });
   }
-  // -------------------------------------------
 
-  const data = [H].concat(F);
-  const blob = new Blob([toCSV(data)], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  const date = (new Date()).toISOString().slice(0,10);
-  const title = (document.querySelector('h1,h2') && s(document.querySelector('h1,h2').textContent)) || (document.title || 'MO-Greene Docket');
-  a.href = URL.createObjectURL(blob);
-  a.download = title.replace(/[^A-Za-z0-9]+/g,' ').trim() + ' ' + date + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  function runExport(H, R){
+    // Filters you requested:
+    // 1) Keep only rows where Column A contains a comma
+    let F = R;
+    if (H.length >= 1) {
+      F = F.filter(r => (r[0] || '').indexOf(',') !== -1);
+    }
+    // 2) Remove duplicates by Column B, keep first
+    if (H.length >= 2) {
+      const seenB = new Set();
+      F = F.filter(r => {
+        const key = (r[1] || '').replace(/\\s+/g,' ').trim().toLowerCase();
+        if (seenB.has(key)) return false;
+        seenB.add(key);
+        return true;
+      });
+    }
+
+    const data = [H].concat(F);
+    const csv  = toCSV(data);
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    const date = (new Date()).toISOString().slice(0,10);
+    const title = (document.querySelector('h1,h2') && s(document.querySelector('h1,h2').textContent)) || (document.title || 'MO-Greene Docket');
+    a.href = URL.createObjectURL(blob);
+    a.download = title.replace(/[^A-Za-z0-9]+/g,' ').trim() + ' ' + date + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  waitForData(15000).then(({H,R}) => {
+    runExport(H,R);
+  }).catch(err => {
+    console.error('[Infax → CSV] Error:', err);
+    alert('Infax → CSV: ' + err.message + '\\n\\nIf this keeps happening, try Option C (Console) on the page.');
+  });
 })();`;
 
-    // Put pretty code into the textarea
-    document.getElementById('console-snippet').value = CONSOLE_SNIPPET;
+  // Put pretty code into the textarea (Option C)
+  document.getElementById('console-snippet').value = CONSOLE_SNIPPET;
 
-    // Generate a robust bookmarklet from the pretty code
-    const bmCode = CONSOLE_SNIPPET
-      .replace(/\n/g, ' ')               // newlines -> spaces
-      .replace(/\s{2,}/g, ' ')           // collapse multiple spaces
-      .replace(/\s*([{}();,:])\s*/g, '$1'); // trim around punctuation (simple/minimal)
-    document.getElementById('bm').setAttribute('href', 'javascript:' + bmCode);
-  </script>
-</body>
-</html>
+  // Generate the bookmarklet (Option B)
+  // We keep the IIFE and add "void 0" to avoid navigation side effects.
+  const bmCode = CONSOLE_SNIPPET
+    .replace(/\n/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s*([{}();,:])\s*/g, '$1');
+
+  document.getElementById('bm').setAttribute('href', 'javascript:' + bmCode + 'void 0;');
+</script>
