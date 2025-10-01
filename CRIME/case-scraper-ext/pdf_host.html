@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PDF Parser Host</title>
+  <!-- Allow WebAssembly (Tesseract), workers and same-origin fetches -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' 'wasm-unsafe-eval';
+                 worker-src 'self' blob:;
+                 connect-src 'self' data: blob:;
+                 img-src 'self' data: blob:;
+                 style-src 'self' 'unsafe-inline';
+                 object-src 'none';
+                 base-uri 'none'">
+  <style>html,body{margin:0;padding:0;font-family:system-ui,Segoe UI,Roboto,Arial}</style>
+  <!-- Load only our controller; it will import the ESM pdf.js and start OCR as needed -->
+  <script src="pdf_host.js"></script>
+</head>
+<body></body>
+</html>

@@ -125,9 +125,11 @@
       .map(r => Array.from(r.querySelectorAll('[role=\"cell\"]')).map(c => s(c.textContent)));
   }
 
+  // Drop duplicate header row if present
   if(rows.length && headers.length && rows[0].join('|')===headers.join('|')) rows.shift();
   if(!headers.length && rows.length) headers = rows[0].map((_,i) => 'Column '+(i+1));
 
+  // Keep only a common subset, if we can map at least a few known columns
   const hLower = headers.map(h => h.toLowerCase());
   const idx = wanted.map(n => hLower.indexOf(n.toLowerCase())).filter(i => i>-1);
   let H = headers, R = rows;
@@ -136,7 +138,26 @@
     R = rows.map(r => idx.map(i => r[i] || ''));
   }
 
-  const data = [H].concat(R);
+  // ---------- FILTERS YOU ASKED FOR ----------
+  // 1) Remove rows whose Column A (first output column) does NOT contain a comma
+  let F = R;
+  if (H.length >= 1) {
+    F = F.filter(r => (r[0] || '').indexOf(',') !== -1);
+  }
+
+  // 2) Remove duplicate rows by Column B (second output column), keeping the first
+  if (H.length >= 2) {
+    const seenB = new Set();
+    F = F.filter(r => {
+      const key = (r[1] || '').replace(/\\s+/g,' ').trim().toLowerCase();
+      if (seenB.has(key)) return false;
+      seenB.add(key);
+      return true;
+    });
+  }
+  // -------------------------------------------
+
+  const data = [H].concat(F);
   const blob = new Blob([toCSV(data)], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   const date = (new Date()).toISOString().slice(0,10);

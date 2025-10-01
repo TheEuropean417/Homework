@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Case Scraper → Workbook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Case Scraper <span>→ Workbook</span></h1>
+    <p class="sub">Upload a CSV with <strong>Case Number</strong> (header) and names in column A. Enter a start URL and click Start.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="grid">
+        <div class="field">
+          <label for="startUrl">Start URL</label>
+          <input
+            id="startUrl"
+            type="url"
+            value="https://www.courts.mo.gov/cnet/caseNoSearch.do"
+            placeholder="https://www.courts.mo.gov/cnet/caseNoSearch.do"
+            autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="file">Spreadsheet (CSV)</label>
+          <input id="file" type="file" accept=".csv,text/csv">
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <label for="caseHeader">Case Number header</label>
+          <input id="caseHeader" placeholder="Case Number" value="Case Number">
+        </div>
+        <div class="field">
+          <label for="nameHeader">Name header (optional; defaults to col A)</label>
+          <input id="nameHeader" placeholder="Name (optional)">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="startBtn" class="primary">Start</button>
+        <button id="stopBtn" class="ghost">Stop (Esc)</button>
+        <button id="downloadBtn" class="secondary" disabled>Download Workbook</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Status</h2>
+      <div id="status" class="status"></div>
+      <div id="progress" class="progress">
+        <div id="bar" class="bar" style="width:0%"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Parsed Cases</h2>
+      <div id="cases" class="cases"></div>
+    </section>
+  </main>
+s
+  <footer>
+    <p>Tip: Export your Excel file to <strong>CSV</strong> first. This tool generates an Excel‑compatible <strong>.xml</strong> workbook with a sheet per case.</p>
+  </footer>
+
+<script src="popup.js"></script>
+</body>
+</html>

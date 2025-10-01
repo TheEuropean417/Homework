@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "MO Courts Case Scraper",
+  "version": "1.0.0",
+  "description": "Automates MO Courts case lookup, captures Charges & Docket text, opens related PDFs, and exports everything to an Excel XML workbook.",
+
+  "permissions": [
+    "scripting",
+    "tabs",
+    "downloads",
+    "storage",
+    "activeTab"
+  ],
+
+  "host_permissions": [
+    "https://www.courts.mo.gov/*", "https://api.ocr.space/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "action": {
+    "default_title": "Court Scraper",
+    "default_popup": "popup.html"
+  },
+
+  "content_scripts": [
+    {
+    "matches": ["https://www.courts.mo.gov/*"],
+    "js": ["scraper.js"],
+    "run_at": "document_idle",
+    "all_frames": false
+    }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "vendor/pdf.min.js",
+        "vendor/pdf.worker.min.js",
+        "vendor/legacy/build/pdf.min.mjs",
+        "vendor/legacy/build/pdf.worker.min.mjs",
+        "pdf_host.html",
+        "pdf_host.js",
+        "vendor/tesseract/tesseract.min.js",
+        "vendor/tesseract/worker.min.js",
+        "vendor/tesseract/tesseract-core.wasm.js",
+        "vendor/tesseract/tesseract-core.wasm",
+        "vendor/tesseract/eng.traineddata.gz"
+    ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

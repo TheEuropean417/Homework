@@ -1,0 +1,17 @@
+{
+  "name": "case-scraper-ext",
+  "version": "1.0.0",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "pdfjs-dist": "^4.10.38",
+    "tesseract.js": "^2.1.5",
+    "tesseract.js-core": "^2.2.0"
+  },
+  "description": ""
+}
